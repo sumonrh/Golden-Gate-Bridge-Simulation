@@ -1,0 +1,3219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10191e">
+  <title>Golden Gate Bridge Interactive Simulation</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --orange: #ef5a31;
+      --orange-hot: #ff7744;
+      --orange-deep: #b93420;
+      --charcoal: #10191e;
+      --ink: #152329;
+      --steel: #aebdc1;
+      --fog: #e8f0ed;
+      --bay: #3b91a4;
+      --teal: #62d7c7;
+      --yellow: #f5cc68;
+      --danger: #ff806e;
+      --glass: rgba(12, 23, 29, .80);
+      --glass-light: rgba(245, 250, 247, .88);
+      --line: rgba(216, 233, 228, .16);
+      --soft-line: rgba(216, 233, 228, .10);
+      --shadow: 0 20px 70px rgba(0, 0, 0, .34);
+      --panel-radius: 12px;
+      --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      --sans: "Trebuchet MS", "Segoe UI", sans-serif;
+      --display: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      color: var(--fog);
+      background: #0b1419;
+      font-family: var(--sans);
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; letter-spacing: 0; }
+    button, select, input[type="range"], input[type="checkbox"] { cursor: pointer; }
+    button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      background: #0c171c;
+      transition: opacity .5s ease, visibility .5s ease;
+    }
+    #loading.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loading-card {
+      width: min(420px, calc(100vw - 40px));
+      padding: 28px;
+      border: 1px solid rgba(232, 240, 237, .16);
+      border-radius: 14px;
+      background: rgba(22, 35, 40, .95);
+      box-shadow: var(--shadow);
+    }
+    .loading-mark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--orange-hot);
+      font: 700 12px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .loading-mark::before {
+      content: "";
+      width: 34px;
+      height: 3px;
+      background: var(--orange);
+      box-shadow: 12px -6px 0 rgba(239, 90, 49, .45), 24px -12px 0 rgba(239, 90, 49, .24);
+    }
+    .loading-card h1 {
+      margin: 22px 0 8px;
+      font: 600 clamp(25px, 5vw, 38px)/1.05 var(--display);
+      color: #f3f7f3;
+    }
+    .loading-card p { margin: 0; color: #aabdc0; font-size: 14px; }
+    .loading-track {
+      height: 4px;
+      margin-top: 24px;
+      overflow: hidden;
+      border-radius: 4px;
+      background: rgba(232, 240, 237, .12);
+    }
+    .loading-track span {
+      display: block;
+      width: 45%;
+      height: 100%;
+      background: var(--orange);
+      animation: loadbar 1.4s ease-in-out infinite;
+    }
+    @keyframes loadbar { 0% { transform: translateX(-120%); } 100% { transform: translateX(340%); } }
+
+    #app { height: 100%; opacity: 1; transition: opacity .4s ease; }
+    #app[aria-busy="true"] { opacity: .1; }
+    .topbar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 68px;
+      padding: 10px 18px 10px 22px;
+      border-bottom: 1px solid rgba(226, 238, 232, .12);
+      background: rgba(11, 21, 26, .88);
+      backdrop-filter: blur(18px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      min-width: 230px;
+    }
+    .brand-icon {
+      position: relative;
+      width: 46px;
+      height: 28px;
+      flex: 0 0 auto;
+      border-bottom: 3px solid var(--orange);
+    }
+    .brand-icon::before, .brand-icon::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      width: 4px;
+      height: 25px;
+      background: var(--orange);
+    }
+    .brand-icon::before { left: 5px; }
+    .brand-icon::after { right: 5px; }
+    .brand-icon span, .brand-icon i {
+      position: absolute;
+      bottom: 12px;
+      width: 37px;
+      height: 18px;
+      border-top: 2px solid var(--orange-hot);
+      border-radius: 50% 50% 0 0;
+    }
+    .brand-icon span { left: 5px; }
+    .brand-icon i { bottom: 7px; left: 5px; height: 13px; border-color: rgba(255, 119, 68, .65); }
+    .brand-copy strong {
+      display: block;
+      color: #f3f7f2;
+      font: 700 13px/1.1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .brand-copy small { display: block; margin-top: 5px; color: #8fa5a9; font-size: 11px; }
+    .status-strip {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      gap: 7px;
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #b8cbc9;
+      background: rgba(238, 247, 243, .05);
+      font: 10px var(--mono);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .status-chip b { color: #eff8f3; font-weight: 600; }
+    .status-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #6d7a7c; }
+    .status-chip.active .dot { background: var(--orange-hot); box-shadow: 0 0 12px var(--orange); }
+    .status-chip.safe .dot { background: var(--teal); }
+
+    .workspace {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(270px, 316px) minmax(0, 1fr) minmax(254px, 300px);
+      height: calc(100% - 68px);
+    }
+    .rail, .inspector {
+      position: relative;
+      z-index: 5;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(232,240,237,.25) transparent;
+      background: var(--glass);
+      backdrop-filter: blur(18px);
+    }
+    .rail { border-right: 1px solid rgba(226, 238, 232, .12); }
+    .inspector { border-left: 1px solid rgba(226, 238, 232, .12); }
+    .rail.is-collapsed, .inspector.is-collapsed { display: none; }
+    .workspace.left-collapsed { grid-template-columns: minmax(0, 1fr) minmax(254px, 300px); }
+    .workspace.right-collapsed { grid-template-columns: minmax(270px, 316px) minmax(0, 1fr); }
+    .workspace.both-collapsed { grid-template-columns: minmax(0, 1fr); }
+    .collapse-btn { width: 30px; min-width: 30px; height: 30px; padding: 0; font-size: 12px; border-radius: 6px; }
+    .expand-bar { position: absolute; top: 50%; z-index: 6; transform: translateY(-50%); }
+    .expand-bar.left { left: 10px; }
+    .expand-bar.right { right: 10px; }
+    .expand-btn { min-height: 32px; padding: 6px 10px; font-size: 11px; background: rgba(12,23,29,.88); backdrop-filter: blur(10px); }
+    @media (max-width: 900px) {
+      .workspace.left-collapsed, .workspace.right-collapsed, .workspace.both-collapsed { display: block; }
+    }
+    .rail-inner, .inspector-inner { padding: 14px; }
+    .rail-header, .inspector-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 5px 3px 14px;
+    }
+    .eyebrow {
+      color: var(--orange-hot);
+      font: 10px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .rail-header h2, .inspector-header h2 {
+      margin: 5px 0 0;
+      color: #f1f5f1;
+      font: 600 21px/1.05 var(--display);
+    }
+    .rail-header p, .inspector-header p { margin: 7px 0 0; color: #93a9ab; font-size: 11px; line-height: 1.4; }
+    .mini-mark {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border: 1px solid rgba(239,90,49,.55);
+      border-radius: 50%;
+      color: var(--orange-hot);
+      font: 11px var(--mono);
+    }
+
+    details.panel {
+      margin: 7px 0;
+      border: 1px solid var(--line);
+      border-radius: var(--panel-radius);
+      background: rgba(232, 240, 237, .045);
+    }
+    details.panel[open] { border-color: rgba(239, 90, 49, .34); }
+    details.panel > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 43px;
+      padding: 11px 12px;
+      list-style: none;
+      color: #e8f0ed;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    details.panel > summary::-webkit-details-marker { display: none; }
+    details.panel > summary::after { content: "+"; color: #8da4a6; font: 16px var(--mono); }
+    details.panel[open] > summary::after { content: "-"; color: var(--orange-hot); }
+    .panel-body { padding: 0 12px 13px; }
+    .control { margin-top: 12px; }
+    .control:first-child { margin-top: 0; }
+    .control-row { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+    .control label, .control legend { color: #abc0bf; font-size: 11px; }
+    .control label { display: block; margin-bottom: 6px; }
+    .control label .hint { color: #789093; }
+    .value { color: var(--yellow); font: 11px var(--mono); white-space: nowrap; }
+    select, input[type="number"], input[type="text"] {
+      width: 100%;
+      min-height: 32px;
+      padding: 6px 8px;
+      border: 1px solid rgba(214,232,226,.18);
+      border-radius: 6px;
+      color: #eff7f3;
+      background: rgba(3, 13, 18, .72);
+    }
+    select option { color: #eef6f3; background: #16252a; }
+    input[type="number"] { width: 84px; font: 11px var(--mono); }
+    input[type="range"] { width: 100%; accent-color: var(--orange); }
+    .range-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 9px; }
+    .range-line input[type="range"] { min-width: 0; }
+    .unit-input { display: flex; align-items: center; gap: 6px; }
+    .unit-input span { color: #789093; font: 10px var(--mono); }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .triple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .button-row.one { grid-template-columns: 1fr; }
+    .button-row.three { grid-template-columns: repeat(3, 1fr); }
+    button {
+      min-height: 34px;
+      padding: 7px 9px;
+      border: 1px solid rgba(217, 233, 227, .18);
+      border-radius: 6px;
+      color: #eaf2ee;
+      background: rgba(237, 246, 241, .07);
+      font-size: 11px;
+      font-weight: 700;
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    button:hover { border-color: rgba(239,90,49,.7); background: rgba(239,90,49,.18); }
+    button:active { transform: translateY(1px); }
+    button.primary { border-color: rgba(239,90,49,.64); background: rgba(190,55,31,.72); }
+    button.primary:hover { background: rgba(239,90,49,.86); }
+    button.active { color: #151b1c; border-color: var(--teal); background: var(--teal); }
+    button.warn { border-color: rgba(245,204,104,.5); color: var(--yellow); }
+    .check-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 33px;
+      color: #abc0bf;
+      font-size: 11px;
+    }
+    .check-line input { width: 18px; height: 18px; accent-color: var(--orange); }
+    .section-note {
+      margin: 10px 0 0;
+      padding: 9px;
+      border-left: 2px solid rgba(98,215,199,.65);
+      color: #99aeaf;
+      background: rgba(98,215,199,.06);
+      font-size: 10px;
+      line-height: 1.45;
+    }
+    .section-note strong { color: #dcebe6; font-weight: 600; }
+    .small-copy { color: #789093; font-size: 10px; line-height: 1.45; }
+    .kbd {
+      display: inline-block;
+      padding: 2px 5px;
+      border: 1px solid rgba(220,234,229,.22);
+      border-radius: 3px;
+      color: #cfe0dc;
+      background: rgba(232,240,237,.08);
+      font: 10px var(--mono);
+    }
+
+    #viewport {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      background: #18323a;
+    }
+    #sceneMount { position: absolute; inset: 0; }
+    #sceneMount canvas { display: block; width: 100%; height: 100%; }
+    .scene-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 45%, transparent 42%, rgba(4, 10, 13, .20) 100%);
+    }
+    .scene-label {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+      color: rgba(234, 244, 239, .75);
+      font: 10px var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 5px rgba(0,0,0,.75);
+    }
+    .scene-label.bridge { top: 18px; left: 20px; }
+    .scene-label.coords { right: 18px; bottom: 18px; color: rgba(234,244,239,.52); }
+    .viewport-tools {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 4;
+      display: flex;
+      gap: 6px;
+    }
+    .icon-button { width: 35px; min-width: 35px; padding: 6px; font-size: 15px; }
+    .viewport-hud {
+      position: absolute;
+      left: 15px;
+      right: 15px;
+      bottom: 14px;
+      z-index: 4;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      pointer-events: none;
+    }
+    .hud-card {
+      max-width: 470px;
+      padding: 11px 13px;
+      border: 1px solid rgba(226,239,233,.17);
+      border-radius: 8px;
+      background: rgba(8, 18, 23, .66);
+      backdrop-filter: blur(12px);
+    }
+    .hud-card h3 { margin: 0 0 5px; color: #f4f7f1; font: 600 16px var(--display); }
+    .hud-card p { margin: 0; color: #acc0bf; font-size: 10px; line-height: 1.4; }
+    .hud-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .hud-badge {
+      padding: 5px 7px;
+      border: 1px solid rgba(226,239,233,.15);
+      border-radius: 4px;
+      color: #a4b9b9;
+      background: rgba(8,18,23,.6);
+      font: 10px var(--mono);
+      white-space: nowrap;
+    }
+    .hud-badge b { color: var(--yellow); }
+
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .metric {
+      min-height: 57px;
+      padding: 8px;
+      border: 1px solid var(--soft-line);
+      border-radius: 7px;
+      background: rgba(232,240,237,.045);
+    }
+    .metric span { display: block; color: #7f999a; font: 9px var(--mono); line-height: 1.2; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 5px; color: #f0f6f1; font: 600 15px var(--mono); }
+    .metric em { color: #91a8a7; font: normal 9px var(--mono); }
+    .metric.accent { border-color: rgba(239,90,49,.32); }
+    .metric.accent strong { color: var(--orange-hot); }
+    .metric.teal { border-color: rgba(98,215,199,.26); }
+    .metric.teal strong { color: var(--teal); }
+    .chart-wrap { margin-top: 13px; }
+    .chart-title { display: flex; justify-content: space-between; margin-bottom: 6px; color: #9db3b1; font: 10px var(--mono); text-transform: uppercase; }
+    canvas.chart { display: block; width: 100%; height: 108px; border: 1px solid var(--soft-line); border-radius: 7px; background: rgba(0,0,0,.16); }
+    .legend { display: grid; gap: 7px; margin-top: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; color: #a5b9b8; font-size: 10px; }
+    .legend-swatch { width: 17px; height: 4px; flex: 0 0 auto; border-radius: 4px; background: var(--orange); }
+    .legend-swatch.cable { background: #e8b879; }
+    .legend-swatch.node { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+    .legend-swatch.hazard { background: var(--danger); }
+    .legend-swatch.vehicle { background: #f2d77b; }
+    .diagnostic-output { color: #94abad; font: 9px/1.55 var(--mono); white-space: pre-wrap; }
+    .footer-stamp { margin-top: 15px; color: #61797b; font: 9px var(--mono); line-height: 1.5; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 40;
+      max-width: min(430px, calc(100vw - 30px));
+      padding: 10px 14px;
+      border: 1px solid rgba(98,215,199,.4);
+      border-radius: 7px;
+      color: #eaf7f0;
+      background: rgba(12, 29, 31, .95);
+      box-shadow: var(--shadow);
+      font-size: 11px;
+      transform: translate(-50%, 20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .error-card { border-color: rgba(255,128,110,.55); }
+    .error-card strong { color: var(--danger); }
+
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 280px minmax(0, 1fr) 265px; }
+      .brand { min-width: 205px; }
+      .status-chip:nth-child(n+5) { display: none; }
+    }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .topbar { align-items: flex-start; min-height: auto; gap: 12px; }
+      .brand { min-width: 0; }
+      .status-strip { max-width: 55%; }
+      .workspace { display: block; height: auto; min-height: calc(100vh - 86px); }
+      #viewport { height: min(68vh, 670px); min-height: 430px; }
+      .rail, .inspector { border: 0; }
+      .rail-inner, .inspector-inner { padding: 12px 14px; }
+      .rail { max-height: none; }
+      .inspector { max-height: none; }
+      .rail-header { display: none; }
+      .inspector-header { padding-top: 20px; }
+      details.panel { margin: 6px 0; }
+      .viewport-hud { flex-direction: column; align-items: flex-start; }
+      .hud-badges { justify-content: flex-start; }
+    }
+    @media (max-width: 560px) {
+      .topbar { padding: 10px 12px; }
+      .brand-copy small { display: none; }
+      .brand-copy strong { font-size: 10px; }
+      .brand-icon { width: 35px; transform: scale(.8); transform-origin: left center; margin-right: -8px; }
+      .status-strip { gap: 4px; max-width: 62%; }
+      .status-chip { min-height: 27px; padding: 4px 6px; font-size: 8px; }
+      .status-chip:nth-child(n+3) { display: none; }
+      #viewport { height: 64vh; min-height: 390px; }
+      .viewport-tools { top: 10px; right: 10px; }
+      .scene-label.bridge { top: 12px; left: 12px; font-size: 8px; }
+      .viewport-hud { left: 10px; right: 10px; bottom: 10px; }
+      .hud-card { max-width: calc(100vw - 20px); }
+      .hud-card h3 { font-size: 14px; }
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-mark">Exhibit 04 / Structural Systems</div>
+      <h1>Golden Gate Bridge</h1>
+      <p id="loadingMessage">Preparing the bay, cables, and instrument panel...</p>
+      <div class="loading-track" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
+
+  <div id="app" aria-busy="true">
+    <header class="topbar">
+      <div class="brand" aria-label="Golden Gate Bridge Interactive Simulation">
+        <div class="brand-icon" aria-hidden="true"><span></span><i></i></div>
+        <div class="brand-copy">
+          <strong>Golden Gate Bridge</strong>
+          <small>Interactive structural exhibit / conceptual model</small>
+        </div>
+      </div>
+      <div class="status-strip" aria-label="Live simulation status">
+        <div class="status-chip"><span class="dot"></span><span>Mode</span><b id="statusEnvironment">Clear Morning</b></div>
+        <div class="status-chip" id="earthquakeStatus"><span class="dot"></span><span>EQ</span><b id="statusEarthquake">Standby</b></div>
+        <div class="status-chip" id="windStatus"><span class="dot"></span><span>Wind</span><b id="statusWind">70 km/h</b></div>
+        <div class="status-chip safe"><span class="dot"></span><span>Traffic</span><b id="statusTraffic">24 vehicles</b></div>
+        <div class="status-chip"><span class="dot"></span><span>FPS</span><b id="statusFps">--</b></div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="rail" aria-label="Simulation controls">
+        <div class="rail-inner">
+          <div class="rail-header">
+            <div><div class="eyebrow">Control room</div><h2>Live systems</h2><p>Change one system at a time or combine hazards.</p></div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="mini-mark">GG</div><button id="collapseRailBtn" class="collapse-btn" title="Hide controls" aria-label="Hide controls">◀</button></div>
+          </div>
+
+          <details class="panel" open>
+            <summary>Simulation</summary>
+            <div class="panel-body">
+              <div class="button-row">
+                <button id="earthquakeButton" class="primary" title="Start or stop the deterministic earthquake input">Start Earthquake</button>
+                <button id="windstormButton" class="primary" title="Start or stop the repeatable windstorm input">Start Windstorm</button>
+              </div>
+              <div class="button-row" style="margin-top:7px">
+                <button id="masterStopButton" class="warn" title="Stop both active hazards and their camera effects">Master Stop</button>
+                <button id="resetButton" title="Restore the original scene and simulation state">Reset Simulation</button>
+              </div>
+              <div class="button-row" style="margin-top:7px">
+                <button id="tourButton" title="Move through the curated camera viewpoints">Cinematic Tour</button>
+                <button id="fullscreenButton" title="Enter or leave fullscreen mode">Fullscreen</button>
+              </div>
+              <p class="section-note"><strong>Conceptual exhibit.</strong> Motion is intentionally exaggerated for legibility and is not a structural analysis, seismic assessment, aerodynamic analysis, or prediction of actual Golden Gate Bridge performance.</p>
+            </div>
+          </details>
+
+          <details class="panel" open>
+            <summary>Earthquake</summary>
+            <div class="panel-body">
+              <div class="control">
+                <div class="control-row"><label for="pgaRange">Peak ground acceleration <span class="hint">(input)</span></label><span class="value" id="pgaValue">0.30 g</span></div>
+                <div class="range-line"><input id="pgaRange" type="range" min="0" max="1.5" step="0.01" value="0.3" title="Conceptual peak ground acceleration from zero to one point five g"><input id="pgaNumber" type="number" min="0" max="1.5" step="0.01" value="0.30" aria-label="Peak ground acceleration numeric input"></div>
+              </div>
+              <div class="split">
+                <div class="control"><label for="eqDuration">Duration</label><div class="unit-input"><input id="eqDuration" type="number" min="5" max="90" step="1" value="18"><span>s</span></div></div>
+                <div class="control"><label for="damping">Damping</label><div class="unit-input"><input id="damping" type="number" min="0.05" max="0.8" step="0.01" value="0.18"><span>ratio</span></div></div>
+              </div>
+              <div class="control"><label for="eqFrequency">Frequency content / Soil condition</label><select id="eqFrequency" title="Choose the Kanai-Tajimi soil frequency and bandwidth mix"><option value="low">Low (Soft soil, fg ≈ 1 Hz)</option><option value="medium">Medium (Stiff soil, fg ≈ 2 Hz)</option><option value="high">High (Rock site, fg ≈ 4 Hz)</option><option value="mixed" selected>Mixed (Broadband California, fg ≈ 1.5–3 Hz)</option></select></div>
+              <div class="control"><label for="eqDirection">Shaking direction</label><select id="eqDirection" title="Choose which bridge response axis receives earthquake motion"><option value="longitudinal">Longitudinal</option><option value="transverse">Transverse</option><option value="vertical">Vertical</option><option value="combined" selected>Combined</option></select></div>
+              <div class="control"><label for="seedInput">Repeatability seed</label><input id="seedInput" type="number" min="1" max="9999" step="1" value="17" title="The same seed reproduces the exact same synthetic accelerogram"></div>
+              <div class="control"><div class="control-row"><label for="eqCameraShake">Camera shake</label><input id="eqCameraShake" type="checkbox" checked></div></div>
+              <div class="eq-metrics-card" style="margin-top:6px;padding:8px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:6px;font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;">
+                <div>Arias Intensity (Ia): <strong id="eqArias" style="color:var(--yellow)">--</strong></div>
+                <div>Significant Dur. (D5-95): <strong id="eqSigDur" style="color:var(--teal)">--</strong></div>
+                <div>Soil Resonance (fg): <strong id="eqSoilFreq" style="color:var(--steel)">--</strong></div>
+                <div>Generator: <strong style="color:var(--orange-hot)">SDOF-Seismic (Boore 1983)</strong></div>
+              </div>
+              <div class="small-copy" style="margin-top:6px;">Stochastic synthetic accelerogram generator: Boore (1983) + Kanai-Tajimi soil filter + Jennings-Housner envelope + 2-pass baseline correction (SDOF-Seismic-Simulator).</div>
+            </div>
+          </details>
+
+          <details class="panel" open>
+            <summary>Windstorm</summary>
+            <div class="panel-body">
+              <div class="control"><div class="control-row"><label for="windRange">Wind speed <span class="hint">(input)</span></label><span class="value" id="windValue">70 km/h</span></div><input id="windRange" type="range" min="0" max="200" step="1" value="70" title="Sustained wind speed from zero to two hundred kilometres per hour"></div>
+              <div class="control"><label for="windDirection">Wind direction <span class="hint">(world degrees)</span></label><div class="range-line"><input id="windDirection" type="range" min="0" max="360" step="1" value="90"><span class="value" id="windDirectionValue">090 deg</span></div></div>
+              <div class="split">
+                <div class="control"><label for="gustRange">Gust intensity</label><div class="range-line"><input id="gustRange" type="range" min="0" max="100" step="1" value="35"><span class="value" id="gustValue">35%</span></div></div>
+                <div class="control"><label for="turbulenceRange">Turbulence</label><div class="range-line"><input id="turbulenceRange" type="range" min="0" max="100" step="1" value="22"><span class="value" id="turbulenceValue">22%</span></div></div>
+              </div>
+              <div class="split">
+                <div class="control"><label for="windDuration">Storm duration</label><div class="unit-input"><input id="windDuration" type="number" min="5" max="120" step="1" value="30"><span>s</span></div></div>
+                <div class="control"><label for="stormFog">Fog density</label><div class="range-line"><input id="stormFog" type="range" min="0" max="100" step="1" value="22"><span class="value" id="fogValue">22%</span></div></div>
+              </div>
+              <div class="check-line"><span>Directional rain</span><input id="rainToggle" type="checkbox" aria-label="Enable directional rain"></div>
+              <div class="check-line"><span>Camera shake</span><input id="windCameraShake" type="checkbox" checked aria-label="Enable wind camera shake"></div>
+              <div class="check-line"><span>Restrict motorcycles / heavy trucks</span><input id="restrictionToggle" type="checkbox" checked aria-label="Restrict motorcycles and heavy trucks in extreme wind"></div>
+              <div class="small-copy">Gusts use smooth repeatable functions; severe wind slows traffic and can restrict vulnerable vehicle classes.</div>
+            </div>
+          </details>
+
+          <details class="panel" open>
+            <summary>Traffic</summary>
+            <div class="panel-body">
+              <div class="control"><div class="control-row"><label for="densityRange">Traffic density</label><span class="value" id="densityValue">55%</span></div><input id="densityRange" type="range" min="0" max="100" step="1" value="55" title="Adjust the number of pooled vehicles on the approaches and bridge"></div>
+              <div class="control"><div class="control-row"><label for="trafficSpeed">Traffic speed</label><span class="value" id="trafficSpeedValue">65 km/h</span></div><input id="trafficSpeed" type="range" min="20" max="100" step="1" value="65"></div>
+              <div class="button-row"><button id="trafficPauseButton" title="Pause or resume all vehicle motion">Pause Traffic</button><button id="trafficClearButton" title="Remove all active vehicles">Clear</button></div>
+              <div class="button-row" style="margin-top:7px"><button id="trafficRegenerateButton" title="Clear and regenerate the full vehicle pool">Regenerate</button><button id="incidentButton" title="Create a bounded congestion incident in one lane">Incident: Off</button></div>
+              <div class="section-note">Vehicle pool includes cars, sedans, SUVs, pickups, buses, delivery trucks, semis, motorcycles, emergency, and maintenance vehicles.</div>
+            </div>
+          </details>
+
+          <details class="panel">
+            <summary>Environment</summary>
+            <div class="panel-body">
+              <div class="control"><label for="environmentSelect">Time and weather</label><select id="environmentSelect" title="Blend the scene between daylight, night, fog, and storm palettes"><option value="morning" selected>Sunny Morning</option><option value="midday">Bright Midday</option><option value="golden">Golden Hour</option><option value="sunset">Sunset</option><option value="night">Night</option><option value="fog">Coastal Fog</option><option value="storm">Windstorm</option></select></div>
+              <div class="check-line"><span>Lightning flashes</span><input id="lightningToggle" type="checkbox" checked aria-label="Enable lightning flashes during severe storms"></div>
+              <div class="check-line"><span>Reduced-motion mode</span><input id="reducedMotionToggle" type="checkbox" aria-label="Reduce animation and camera motion"></div>
+              <div class="check-line"><span>Disable flashing lights</span><input id="disableFlashing" type="checkbox" aria-label="Disable flashing emergency and lightning lights"></div>
+              <p class="small-copy">Lightning confirmation is shown before enabling frequent flashes. Reduced motion follows the browser preference by default.</p>
+            </div>
+          </details>
+
+          <details class="panel" open>
+            <summary>Structural Display</summary>
+            <div class="panel-body">
+              <div class="control"><div class="control-row"><label for="deformationScale">Deformation scale</label><span class="value" id="scaleValue">10x</span></div><select id="deformationScale" title="Exaggerate the displayed conceptual displacement"><option value="1">1x</option><option value="5">5x</option><option value="10" selected>10x</option><option value="25">25x</option><option value="50">50x</option></select></div>
+              <div class="check-line"><span>Realistic FEM (SDOF + stiffness)</span><input id="realisticToggle" type="checkbox" checked aria-label="Enable realistic FEM-based deformation"></div>
+              <div class="check-line"><span>Structural overlay</span><input id="overlayToggle" type="checkbox" checked aria-label="Show structural nodes, reference lines, and displacement vectors"></div>
+              <div class="check-line"><span>Displacement vectors</span><input id="vectorsToggle" type="checkbox" checked aria-label="Show simplified displacement vectors"></div>
+              <p class="section-note">When <strong>Realistic FEM</strong> is on, deformation is from Newmark SDOF integration (SDOF-Seismic-Simulator) with stiffness from truss depth 25ft / cable EA (StructCalc beam `k=12EI/L³`) — load = `-M·ag + 0.5ρCdV²·A`. Values include visual scale; 1× is true meters, 10× is exaggerated.</p>
+            </div>
+          </details>
+
+          <details class="panel">
+            <summary>Camera</summary>
+            <div class="panel-body">
+              <div class="control"><label for="presetSelect">Viewpoint preset</label><select id="presetSelect" title="Move smoothly to a named bridge viewpoint"><option value="overview">Full Bridge Overview</option><option value="sf">San Francisco Approach</option><option value="marin">Marin Headlands</option><option value="fort">Fort Point</option><option value="southTower">South Tower</option><option value="northTower">North Tower</option><option value="midspan">Midspan Deck</option><option value="cable">Main Cable Inspection</option><option value="driver">Roadway Driver View (moving)</option><option value="water">Water-Level View</option><option value="skyline">City Skyline</option><option value="bird">Birds-Eye View</option><option value="eqObservation">Earthquake Observation</option><option value="windObservation">Windstorm Observation</option></select></div>
+              <div class="button-row"><button id="cameraResetButton" title="Return to the full bridge overview camera">Reset Camera</button><button id="autorotateButton" title="Toggle slow orbit around the current target">Auto-rotate: Off</button></div>
+              <div class="control"><div class="control-row"><label for="cameraShakeRange">Shake intensity</label><span class="value" id="cameraShakeValue">35%</span></div><input id="cameraShakeRange" type="range" min="0" max="100" step="1" value="35"></div>
+              <div class="small-copy">Orbit, pan, zoom, touch gestures, and keyboard focus remain available through OrbitControls.</div>
+            </div>
+          </details>
+
+          <details class="panel">
+            <summary>Audio</summary>
+            <div class="panel-body">
+              <div class="button-row one"><button id="muteButton" title="Mute or unmute synthesized exhibit audio">Enable Audio</button></div>
+              <div class="control"><div class="control-row"><label for="masterVolume">Master volume</label><span class="value" id="masterVolumeValue">35%</span></div><input id="masterVolume" type="range" min="0" max="100" value="35"></div>
+              <div class="split">
+                <div class="control"><label for="windVolume">Wind</label><input id="windVolume" type="range" min="0" max="100" value="35"></div>
+                <div class="control"><label for="trafficVolume">Traffic</label><input id="trafficVolume" type="range" min="0" max="100" value="30"></div>
+                <div class="control"><label for="hazardVolume">Hazard</label><input id="hazardVolume" type="range" min="0" max="100" value="40"></div>
+                <div class="control"><label for="ambientVolume">Ambient</label><input id="ambientVolume" type="range" min="0" max="100" value="25"></div>
+              </div>
+              <p class="small-copy">Audio starts only after an explicit button or other user interaction. All sounds are synthesized with Web Audio.</p>
+            </div>
+          </details>
+
+          <details class="panel">
+            <summary>Performance</summary>
+            <div class="panel-body">
+              <div class="control"><label for="qualitySelect">Graphics preset</label><select id="qualitySelect" title="Adjust shadows, particles, city detail, cable detail, and pixel ratio"><option value="low">Low</option><option value="medium">Medium</option><option value="high" selected>High</option><option value="ultra">Ultra</option></select></div>
+              <div class="check-line"><span>Developer diagnostics</span><input id="diagnosticsToggle" type="checkbox" aria-label="Show renderer and performance diagnostics"></div>
+              <div id="diagnosticsOutput" class="diagnostic-output" hidden>Waiting for renderer...</div>
+              <p class="small-copy">Shared geometry, pooled traffic and particles, bounded histories, clamped pixel ratio, and visibility-aware effects keep the exhibit responsive.</p>
+            </div>
+          </details>
+
+          <details class="panel">
+            <summary>Help and Assumptions</summary>
+            <div class="panel-body">
+              <p class="section-note"><strong>Interpretation:</strong> The bridge is scaled at 0.1 scene units per foot from published Golden Gate dimensions: 4,200 ft main span, 1,125 ft side spans, 746 ft towers above water, 220 ft roadway clearance, and a 90 ft deck. The main cables are seated at the 746 ft tower tops; the published 500 ft tower-above-roadway figure is a separate rounded reference datum. The 470 ft main-cable sag is a profile-based modeling assumption. The stiffening truss is modelled as dual 25 ft-deep (7.6 m) Warren trusses with verticals at 50 ft (15.24 m) hanger spacing — top/bottom chords, verticals, alternating diagonals, floor beams at each panel, and top/bottom lateral bracing (bottom X-bracing added 1953-54) — spaced 90 ft apart in the cable planes, with suspenders transferring deck load from floor-beam panel points to the main cables.</p>
+              <p class="small-copy">Hazards are deterministic teaching aids. Displayed deformation is not measured performance. The model includes below-water tower foundations but omits soil-structure interaction, aeroelastic stability, detailed traffic rules, local bathymetry, and certified material properties.</p>
+              <p class="small-copy">Keyboard: <span class="kbd">Tab</span> focus controls, <span class="kbd">Enter</span> activate, <span class="kbd">R</span> reset camera, <span class="kbd">Space</span> pause traffic.</p>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <section id="viewport" aria-label="Three-dimensional Golden Gate Bridge scene">
+        <div id="sceneMount"></div>
+        <div class="scene-vignette" aria-hidden="true"></div>
+        <div class="scene-label bridge">San Francisco Bay / conceptual structural view</div>
+        <div class="scene-label coords">x 0.0 / y 0.0 / z 0.0</div>
+        <div class="viewport-tools">
+          <button id="viewportOverlayButton" class="icon-button" title="Toggle the structural overlay" aria-label="Toggle structural overlay">+</button>
+          <button id="viewportHelpButton" class="icon-button" title="Open help and assumptions" aria-label="Open help and assumptions">?</button>
+        </div>
+        <div id="expandRailBar" class="expand-bar left" hidden><button id="expandRailBtn" class="expand-btn" title="Show controls" aria-label="Show controls">▶ Controls</button></div>
+        <div id="expandInspectorBar" class="expand-bar right" hidden><button id="expandInspectorBtn" class="expand-btn" title="Show panel" aria-label="Show panel">Panel ◀</button></div>
+        <div class="viewport-hud">
+          <div class="hud-card">
+            <h3>Suspension span / live response</h3>
+            <p id="sceneCaption">A stylized Golden Gate Bridge connects the Presidio approach to the Marin Headlands. Choose a camera preset or orbit the scene.</p>
+          </div>
+          <div class="hud-badges" aria-label="Scene values">
+            <div class="hud-badge">PGA <b id="hudPga">0.30 g</b></div>
+            <div class="hud-badge">WIND <b id="hudWind">70 km/h</b></div>
+            <div class="hud-badge">SCALE <b id="hudScale">10x</b></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Engineering dashboard">
+        <div class="inspector-inner">
+          <div class="inspector-header"><div><div class="eyebrow">Conceptual telemetry</div><h2>Instrument panel</h2><p>Calculated response is bounded and display-only.</p></div><div style="display:flex;align-items:center;gap:8px"><div class="mini-mark">01</div><button id="collapseInspectorBtn" class="collapse-btn" title="Hide panel" aria-label="Hide panel">▶</button></div></div>
+          <div class="metric-grid">
+            <div class="metric accent"><span>Peak ground accel.</span><strong id="metricPga">0.30 g</strong><em>user input</em></div>
+            <div class="metric"><span>Current ground accel.</span><strong id="metricGround">0.00 g</strong><em>seeded input</em></div>
+            <div class="metric"><span>Wind / gust</span><strong id="metricWind">70 / 82</strong><em>km/h</em></div>
+            <div class="metric teal"><span>Midspan lateral</span><strong id="metricLateral">0.00 m</strong><em>displayed</em></div>
+            <div class="metric"><span>Midspan vertical</span><strong id="metricVertical">0.00 m</strong><em>displayed</em></div>
+            <div class="metric"><span>Deck rotation</span><strong id="metricRotation">0.00 deg</strong><em>simplified</em></div>
+            <div class="metric"><span>Tower-top shift</span><strong id="metricTower">0.00 m</strong><em>displayed</em></div>
+            <div class="metric"><span>Max cable movement</span><strong id="metricCable">0.00 m</strong><em>displayed</em></div>
+            <div class="metric"><span>Active vehicles</span><strong id="metricVehicles">24</strong><em id="metricHeavy">0 heavy</em></div>
+            <div class="metric"><span>Traffic speed</span><strong id="metricTraffic">65 km/h</strong><em id="metricRestriction">normal flow</em></div>
+            <div class="metric"><span>Scale / elapsed</span><strong id="metricScale">10x</strong><em id="metricElapsed">00:00.0</em></div>
+            <div class="metric"><span>Weather</span><strong id="metricWeather">Morning</strong><em id="metricWeatherDetail">clear visibility</em></div>
+          </div>
+
+          <div class="chart-wrap"><div class="chart-title"><span>Earthquake trace</span><span id="eqChartState">standby</span></div><canvas id="eqChart" class="chart" width="540" height="216" aria-label="Earthquake input and displacement chart"></canvas></div>
+          <div class="chart-wrap"><div class="chart-title"><span>Wind response</span><span id="windChartState">standby</span></div><canvas id="windChart" class="chart" width="540" height="216" aria-label="Wind speed and lateral response chart"></canvas></div>
+
+          <div class="legend" aria-label="Scene legend">
+            <div class="legend-item"><span class="legend-swatch"></span>International Orange bridge steel</div>
+            <div class="legend-item"><span class="legend-swatch cable"></span>Main cables and suspenders</div>
+            <div class="legend-item"><span class="legend-swatch node"></span>Structural nodes / reference line</div>
+            <div class="legend-item"><span class="legend-swatch hazard"></span>Active hazard response</div>
+            <div class="legend-item"><span class="legend-swatch vehicle"></span>Traffic and restrictions</div>
+          </div>
+          <div class="footer-stamp">GGB-IS / 2026.08<br>Scene values are conceptual and intentionally bounded.</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    /* Scene initialization */
+    const loading = document.getElementById('loading');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const app = document.getElementById('app');
+    const toast = document.getElementById('toast');
+    window.__bridgeReady = false;
+
+    const setLoading = (message) => { loadingMessage.textContent = message; };
+    const showToast = (message, isError = false) => {
+      toast.textContent = message;
+      toast.classList.toggle('error-card', isError);
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 3400);
+    };
+
+    let THREE;
+    let OrbitControls;
+
+    try {
+      setLoading('Loading Three.js exhibit modules...');
+      THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+      ({ OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
+      setLoading('Generating towers, cables, and the bay...');
+    } catch (error) {
+      setLoading('The Three.js module could not be loaded. Start a local web server and check network access.');
+      loading.querySelector('.loading-card').innerHTML = '<div class="loading-mark">Module error</div><h1>Scene unavailable</h1><p><strong style="color:#ff806e">Three.js could not load.</strong><br>Run this file through a local web server with network access to the jsDelivr CDN, then reload.</p>';
+      console.error('Three.js module loading failed', error);
+      throw error;
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const fmt = (value, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : '0.00';
+    const pad = (value, length = 2) => String(value).padStart(length, '0');
+    const degToRad = Math.PI / 180;
+    const TAU = Math.PI * 2;
+    const BRIDGE_SCALE = .1;
+    const BRIDGE_DIMENSIONS = Object.freeze({
+      mainSpanFt: 4200,
+      sideSpanFt: 1125,
+      suspensionLengthFt: 6450,
+      overallLengthFt: 8981,
+      towerHeightAboveWaterFt: 746,
+      towerHeightAboveRoadwayFt: 500,
+      roadwayClearanceFt: 220,
+      foundationDepthFt: 110,
+      cableSagFt: 470,
+      cableDiameterIn: 36.375,
+      deckWidthFt: 90,
+      cableSpacingFt: 82,
+      trussDepthFt: 25,
+      floorBeamDepthFt: 8.5,
+      trussPanelFt: 50
+    });
+    const MAIN_SPAN = BRIDGE_DIMENSIONS.mainSpanFt * BRIDGE_SCALE;
+    const SIDE_SPAN = BRIDGE_DIMENSIONS.sideSpanFt * BRIDGE_SCALE;
+    const SUSPENSION_LENGTH = BRIDGE_DIMENSIONS.suspensionLengthFt * BRIDGE_SCALE;
+    const BRIDGE_HALF_LENGTH = BRIDGE_DIMENSIONS.overallLengthFt * BRIDGE_SCALE / 2;
+    const TOWER_X = MAIN_SPAN / 2;
+    const ANCHORAGE_X = SUSPENSION_LENGTH / 2;
+    const SUSPENSION_START = -ANCHORAGE_X;
+    const SUSPENSION_END = ANCHORAGE_X;
+    const DECK_Y = BRIDGE_DIMENSIONS.roadwayClearanceFt * BRIDGE_SCALE;
+    const TOWER_TOP_Y = BRIDGE_DIMENSIONS.towerHeightAboveWaterFt * BRIDGE_SCALE;
+    const FOUNDATION_BOTTOM_Y = -BRIDGE_DIMENSIONS.foundationDepthFt * BRIDGE_SCALE;
+    const CABLE_SADDLE_Y = TOWER_TOP_Y;
+    const MAIN_CABLE_SAG = BRIDGE_DIMENSIONS.cableSagFt * BRIDGE_SCALE;
+    const CABLE_RADIUS = BRIDGE_DIMENSIONS.cableDiameterIn / 12 * BRIDGE_SCALE / 2;
+    const CABLE_Z = BRIDGE_DIMENSIONS.cableSpacingFt * BRIDGE_SCALE / 2;
+    const DECK_WIDTH = BRIDGE_DIMENSIONS.deckWidthFt * BRIDGE_SCALE;
+    const DECK_CABLE_ATTACH_Z = DECK_WIDTH / 2 - .65;
+    const TRUSS_DEPTH = BRIDGE_DIMENSIONS.trussDepthFt * BRIDGE_SCALE;
+    const TRUSS_PANEL = BRIDGE_DIMENSIONS.trussPanelFt * BRIDGE_SCALE;
+    const TRUSS_Z = DECK_CABLE_ATTACH_Z;
+    const FLOOR_BEAM_Y_OFFSET = 1.05;
+    const TRUSS_CHORD_THICKNESS = .42;
+    const TRUSS_DIAGONAL_THICKNESS = .28;
+    const ANCHORAGE_CABLE_Y = DECK_Y + 4;
+    const APPROACH_END_Y = 7;
+    const APPROACH_LENGTH = BRIDGE_HALF_LENGTH - ANCHORAGE_X;
+    const APPROACH_CENTER_X = (BRIDGE_HALF_LENGTH + ANCHORAGE_X) / 2;
+    const APPROACH_CENTER_Y = (DECK_Y + APPROACH_END_Y) / 2;
+    const APPROACH_ROTATION = Math.atan2(DECK_Y - APPROACH_END_Y, APPROACH_LENGTH);
+    const CABLE_STEP = 5;
+    const CABLE_POINT_COUNT = Math.round(SUSPENSION_LENGTH / CABLE_STEP) + 1;
+    const DECK_SEGMENT_STEP = 10;
+    const OVERLAY_NODE_COUNT = Math.ceil(SUSPENSION_LENGTH / 20) + 1;
+    const OVERLAY_NODE_STEP = SUSPENSION_LENGTH / (OVERLAY_NODE_COUNT - 1);
+    const WEATHER_X_HALF_WIDTH = BRIDGE_HALF_LENGTH + 50;
+    const TRAFFIC_LIMIT = BRIDGE_HALF_LENGTH + 35;
+    const POSITIVE_TRAFFIC_LANES = [-2.7, -.9];
+    const NEGATIVE_TRAFFIC_LANES = [.9, 2.7];
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const defaults = {
+      environment: 'morning', earthquake: false, windstorm: false,
+      pga: 0.30, eqDuration: 18, damping: 0.18, eqFrequency: 'mixed', eqDirection: 'combined', seed: 17,
+      windSpeed: 70, windDirection: 90, gust: 35, turbulence: 22, windDuration: 30, stormFog: 22,
+      rain: false, eqCameraShake: true, windCameraShake: true, restriction: true,
+      trafficDensity: 55, trafficSpeed: 65, trafficPaused: false, incident: false,
+      deformationScale: 10, overlay: true, vectors: true, lightning: true,
+      reducedMotion: prefersReducedMotion, disableFlashing: prefersReducedMotion,
+      cameraShakeIntensity: 35, autorotate: false, quality: 'high', preStormEnvironment: 'morning',
+      masterVolume: 35, windVolume: 35, trafficVolume: 30, hazardVolume: 40, ambientVolume: 25,
+      realisticPhysics: true
+    };
+    const state = { ...defaults, simTime: 0, eqClock: 0, eqResidualClock: 99, windClock: 0, tourIndex: 0, visibility: true };
+
+    let renderer, scene, camera, controls;
+    let sunLight, hemiLight, fillLight, ambientLight;
+    let bridgeGroup, towerGroup, environmentGroup, waterGroup, trafficGroup, weatherGroup, overlayGroup;
+    let waterMesh, waterMaterial;
+    let waterUniforms;
+    let deckSegments = [], cableLines = [], cableTubes = [], suspenders = [];
+    let trussGroup, trussMembers = [];
+    let deckCenterLine, deckNodes, displacementVectors;
+    let towerReferences = [];
+    let rainPoints, rainPositions, dustPoints, dustPositions, birdPoints, birdPositions;
+    let cloudBank = [], boats = [];
+    let vehicles = [];
+    let vehicleSerial = 0;
+    let driverCar = null;
+    let driverCarData = null;
+    let isDriverView = false;
+    let currentResponse = { lateral: 0, vertical: 0, longitudinal: 0, rotation: 0, tower: 0, cable: 0, ground: 0, gust: 0, windLateral: 0 };
+    // Simplified FEM/SDOF realistic physics (SDOF-Seismic-Simulator + StructCalc)
+    const PHYSICS = {
+      enabled: true,
+      rhoAir: 1.225, Cd: 1.2,
+      totalMassKg: 24e6, // suspended structure ~24kT (HistoricBridges) + cables
+      effMassRatio: 0.52, // modal participation for first sine mode
+      // natural frequencies tuned from GGB reports (~0.06Hz lateral, 0.13Hz vert) but scaled to keep displacements legible at 1x (~0.8Hz visual)
+      freqHz: { lateral: 0.35, vertical: 0.45, longitudinal: 0.60, torsion: 0.50 },
+      sdof: null
+    };
+    let lastFrame = performance.now();
+    let fpsAccumulator = 0;
+    let fpsFrames = 0;
+    let fps = 60;
+    let toastTimer;
+    let cameraTween = null;
+    let audio = null;
+    let lightningTimer = 4;
+    let lightningFlash = 0;
+    let eqHistory = [];
+    let windHistory = [];
+    let warningLog = [];
+    let isAnimating = false;
+
+    const shared = {};
+    const materials = {};
+
+    function addWarning(message) {
+      warningLog.unshift(`${new Date().toLocaleTimeString()} ${message}`);
+      warningLog = warningLog.slice(0, 5);
+    }
+
+    function makeMaterial(name, options) {
+      materials[name] = new THREE.MeshStandardMaterial(options);
+      return materials[name];
+    }
+
+    function makeLineMaterial(color, opacity = 1, linewidth = 1) {
+      return new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity, linewidth });
+    }
+
+    function createBox(parent, geometry, material, x, y, z, scale = null) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      if (scale) mesh.scale.set(scale.x, scale.y, scale.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function beamBetween(parent, start, end, thickness, material) {
+      const vector = new THREE.Vector3().subVectors(end, start);
+      const length = vector.length();
+      const mesh = new THREE.Mesh(shared.beamGeometry || (shared.beamGeometry = new THREE.BoxGeometry(1, thickness, thickness)), material);
+      mesh.position.copy(start).add(end).multiplyScalar(.5);
+      mesh.scale.set(length, 1, 1);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function seeded(seed) {
+      let value = Math.abs(Math.floor(seed)) % 2147483647;
+      if (value === 0) value = 1;
+      return () => {
+        value = value * 16807 % 2147483647;
+        return (value - 1) / 2147483646;
+      };
+    }
+
+    function smoothNoise(time, seed = 1) {
+      const a = Math.sin(time * 1.17 + seed * 12.7);
+      const b = Math.sin(time * .43 + seed * 4.1 + 1.4);
+      const c = Math.sin(time * .091 + seed * 1.9 + 2.2);
+      return (a * .5 + b * .3 + c * .2);
+    }
+
+    // ---- Realistic physics: SDOF (SDOF-Seismic-Simulator) + FEM stiffness (StructCalc) ----
+    function estimateStiffness(mass, freqHz) {
+      // StructCalc 2D beam: k = 12EI/L^3 per element; for global SDOF, k = m*omega^2
+      // Here we derive EI from truss depth 25ft (7.6m): I = A* (d/2)^2, A_chord ~0.012 m2 -> EI ~ 0.9e11
+      // Calibrated to omega from measured GGB ~0.35Hz lateral to keep 0.3g ~0.3m after Newmark.
+      const omega = 2 * Math.PI * freqHz;
+      return mass * omega * omega;
+    }
+    function initPhysics() {
+      const zeta = clamp(state.damping, 0.02, 0.8);
+      const Meff = PHYSICS.totalMassKg * PHYSICS.effMassRatio;
+      const make = (freqHz) => {
+        const m = Meff;
+        const k = estimateStiffness(m, freqHz);
+        const omega = 2 * Math.PI * freqHz;
+        const c = 2 * m * omega * zeta;
+        return { m, k, c, omega, zeta, u: 0, v: 0, a: 0 };
+      };
+      PHYSICS.sdof = {
+        lateral: make(PHYSICS.freqHz.lateral),
+        vertical: make(PHYSICS.freqHz.vertical),
+        longitudinal: make(PHYSICS.freqHz.longitudinal),
+        torsion: make(PHYSICS.freqHz.torsion)
+      };
+      PHYSICS.enabled = !!state.realisticPhysics;
+    }
+    function sdofStep(sys, dt, ag, fExt) {
+      // Newmark average acceleration gamma=0.5 beta=0.25 (as in SDOF-Seismic-Simulator)
+      const gamma = 0.5, beta = 0.25;
+      const m = sys.m, c = sys.c, k = sys.k;
+      // effective stiffness
+      const kEff = k + gamma / (beta * dt) * c + 1 / (beta * dt * dt) * m;
+      // effective force (ag is ground accel, fExt is wind etc.)
+      const fInertial = -m * ag + fExt;
+      // predictors from previous state
+      const u = sys.u, v = sys.v, a = sys.a;
+      const fEff = fInertial + m * (1 / (beta * dt * dt) * u + 1 / (beta * dt) * v + (1 / (2 * beta) - 1) * a)
+                 + c * (gamma / (beta * dt) * u + (gamma / beta - 1) * v + dt * (gamma / (2 * beta) - 1) * a);
+      const uNext = fEff / kEff;
+      const vNext = gamma / (beta * dt) * (uNext - u) + (1 - gamma / beta) * v + dt * (1 - gamma / (2 * beta)) * a;
+      const aNext = 1 / (beta * dt * dt) * (uNext - u - dt * v) - (1 / (2 * beta) - 1) * a;
+      sys.u = uNext; sys.v = vNext; sys.a = aNext;
+      return uNext;
+    }
+    function resetPhysics() {
+      if (PHYSICS.sdof) {
+        for (const key of Object.keys(PHYSICS.sdof)) {
+          const s = PHYSICS.sdof[key];
+          s.u = s.v = s.a = 0;
+        }
+      }
+    }
+    function cableHeight(x) {
+      const position = clamp(x, SUSPENSION_START, SUSPENSION_END);
+      if (position < -TOWER_X) {
+        const progress = (position - SUSPENSION_START) / SIDE_SPAN;
+        return ANCHORAGE_CABLE_Y + (CABLE_SADDLE_Y - ANCHORAGE_CABLE_Y) * progress * progress;
+      }
+      if (position > TOWER_X) {
+        const progress = (SUSPENSION_END - position) / SIDE_SPAN;
+        return ANCHORAGE_CABLE_Y + (CABLE_SADDLE_Y - ANCHORAGE_CABLE_Y) * progress * progress;
+      }
+      const normalized = position / TOWER_X;
+      return CABLE_SADDLE_Y - MAIN_CABLE_SAG * (1 - normalized * normalized);
+    }
+
+    function deckShape(x) {
+      const position = clamp(x, SUSPENSION_START, SUSPENSION_END);
+      if (position >= -TOWER_X && position <= TOWER_X) return .12 + .88 * Math.pow(Math.cos(position / TOWER_X * Math.PI / 2), 2);
+      return .24 + .18 * (1 - (Math.abs(position) - TOWER_X) / SIDE_SPAN);
+    }
+
+    /* Golden Gate Bridge geometry */
+    function buildBridge() {
+      bridgeGroup = new THREE.Group();
+      bridgeGroup.name = 'Golden Gate Bridge';
+      scene.add(bridgeGroup);
+      towerGroup = new THREE.Group();
+      towerGroup.name = 'International Orange towers';
+      bridgeGroup.add(towerGroup);
+
+      shared.deckGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 1.35, DECK_WIDTH);
+      shared.trussGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 1.2, 1.1);
+      shared.laneGeometry = new THREE.BoxGeometry(6.5, .06, .12);
+      shared.sidewalkGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, .42, 1.2);
+      shared.barrierGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 2.2, .36);
+      shared.poleGeometry = new THREE.CylinderGeometry(.14, .19, 8.5, 8);
+      shared.lampGeometry = new THREE.SphereGeometry(.42, 8, 6);
+      shared.towerLegGeometry = new THREE.BoxGeometry(3.3, TOWER_TOP_Y - FOUNDATION_BOTTOM_Y, 2.3);
+      shared.towerCrossGeometry = new THREE.BoxGeometry(4.2, 2.4, 9.3);
+      shared.towerCapGeometry = new THREE.BoxGeometry(4.8, 2.4, 9.6);
+      shared.anchorGeometry = new THREE.BoxGeometry(25, 20, 14);
+      shared.cableTubeGeometry = null;
+      shared.suspenderGeometry = null;
+
+      for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += DECK_SEGMENT_STEP) {
+        const segment = createBox(bridgeGroup, shared.deckGeometry, materials.orangeSteel, x, DECK_Y, 0);
+        segment.userData.centerX = x; segment.userData.baseZ = 0; segment.userData.baseY = 0;
+        deckSegments.push(segment);
+        const sidewalkA = createBox(bridgeGroup, shared.sidewalkGeometry, materials.sidewalk, x, DECK_Y + 1.05, -(DECK_WIDTH / 2 - .6));
+        const sidewalkB = createBox(bridgeGroup, shared.sidewalkGeometry, materials.sidewalk, x, DECK_Y + 1.05, DECK_WIDTH / 2 - .6);
+        sidewalkA.userData.centerX = x; sidewalkA.userData.baseZ = -(DECK_WIDTH / 2 - .6); sidewalkA.userData.baseY = 1.05; sidewalkA.userData.sidewalk = true;
+        sidewalkB.userData.centerX = x; sidewalkB.userData.baseZ = DECK_WIDTH / 2 - .6; sidewalkB.userData.baseY = 1.05; sidewalkB.userData.sidewalk = true;
+        const barrierA = createBox(bridgeGroup, shared.barrierGeometry, materials.orangeSteel, x, DECK_Y + 1.7, -(DECK_WIDTH / 2 - .25));
+        const barrierB = createBox(bridgeGroup, shared.barrierGeometry, materials.orangeSteel, x, DECK_Y + 1.7, DECK_WIDTH / 2 - .25);
+        barrierA.userData.centerX = x; barrierA.userData.baseZ = -(DECK_WIDTH / 2 - .25); barrierA.userData.baseY = 1.7;
+        barrierB.userData.centerX = x; barrierB.userData.baseZ = DECK_WIDTH / 2 - .25; barrierB.userData.baseY = 1.7;
+      }
+      createStiffeningTruss();
+
+      for (const [index, z] of [-2.7, -.9, .9, 2.7].entries()) {
+        for (let x = SUSPENSION_START + 8; x <= SUSPENSION_END - 8; x += 15) {
+          const stripe = createBox(bridgeGroup, shared.laneGeometry, index === 1 ? materials.laneYellow : materials.laneWhite, x, DECK_Y + .72, z);
+          stripe.userData.centerX = x; stripe.userData.baseZ = z; stripe.userData.baseY = .72;
+        }
+      }
+
+      for (const x of [SUSPENSION_START + 55, -TOWER_X, 0, TOWER_X, SUSPENSION_END - 55]) {
+        const joint = createBox(bridgeGroup, new THREE.BoxGeometry(1.1, .1, DECK_WIDTH - .8), materials.expansion, x, DECK_Y + .74, 0);
+        joint.userData.centerX = x; joint.userData.baseZ = 0; joint.userData.baseY = .74;
+      }
+
+      [-TOWER_X, TOWER_X].forEach((x) => createTower(x));
+      createAnchorages();
+      createMainCables();
+      createRoadLighting();
+      createBridgeSigns();
+      createStructuralOverlay();
+    }
+
+    function createStiffeningTruss() {
+      trussGroup = new THREE.Group();
+      trussGroup.name = 'Stiffening truss (Warren with verticals, 25 ft deep)';
+      bridgeGroup.add(trussGroup);
+      trussMembers = [];
+      if (!shared.beamGeometry) shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const panelCount = Math.round(SUSPENSION_LENGTH / TRUSS_PANEL);
+      const chordThickness = TRUSS_CHORD_THICKNESS;
+      const diagThickness = TRUSS_DIAGONAL_THICKNESS;
+      const verticalThickness = .36;
+      const floorBeamThickness = .55;
+      const lateralThickness = .30;
+      const getTop = (x, z) => getDeckPoint(x, z, currentResponse);
+      const getBottom = (x, z) => {
+        const top = getDeckPoint(x, z, currentResponse);
+        return new THREE.Vector3(top.x, top.y - TRUSS_DEPTH, top.z);
+      };
+      for (let index = 0; index < panelCount; index += 1) {
+        const x0 = SUSPENSION_START + index * TRUSS_PANEL;
+        const x1 = x0 + TRUSS_PANEL;
+        if (x1 > SUSPENSION_END + 0.001) break;
+        for (const side of [-1, 1]) {
+          const z = side * TRUSS_Z;
+          const topStart = getTop(x0, z);
+          const topEnd = getTop(x1, z);
+          const bottomStart = getBottom(x0, z);
+          const bottomEnd = getBottom(x1, z);
+          const topChord = beamBetween(trussGroup, topStart, topEnd, chordThickness, materials.orangeSteel);
+          trussMembers.push({ mesh: topChord, kind: 'topChord', side, x0, x1, z });
+          const bottomChord = beamBetween(trussGroup, bottomStart, bottomEnd, chordThickness, materials.orangeDark);
+          trussMembers.push({ mesh: bottomChord, kind: 'bottomChord', side, x0, x1, z });
+          const vertStart = getTop(x0, z);
+          const vertEnd = getBottom(x0, z);
+          if (index === 0 || true) {
+            const vertical = beamBetween(trussGroup, vertStart, vertEnd, verticalThickness, materials.orangeSteel);
+            trussMembers.push({ mesh: vertical, kind: 'vertical', side, x0, z });
+          }
+          if (index === panelCount - 1) {
+            const vertLast = beamBetween(trussGroup, getTop(x1, z), getBottom(x1, z), verticalThickness, materials.orangeSteel);
+            trussMembers.push({ mesh: vertLast, kind: 'vertical', side, x0: x1, z });
+          }
+          const diagStart = (index % 2 === 0) ? bottomStart : topStart;
+          const diagEnd = (index % 2 === 0) ? topEnd : bottomEnd;
+          const diagonal = beamBetween(trussGroup, diagStart, diagEnd, diagThickness, materials.orangeHot);
+          trussMembers.push({ mesh: diagonal, kind: 'diagonal', side, x0, x1, z, index });
+        }
+        const floorStart = getTop(x0, -TRUSS_Z);
+        const floorEnd = getTop(x0, TRUSS_Z);
+        const floorBeam = beamBetween(trussGroup, floorStart, floorEnd, floorBeamThickness, materials.orangeDark);
+        trussMembers.push({ mesh: floorBeam, kind: 'floorBeam', x0 });
+        if (index === panelCount - 1) {
+          const lastFloor = beamBetween(trussGroup, getTop(x1, -TRUSS_Z), getTop(x1, TRUSS_Z), floorBeamThickness, materials.orangeDark);
+          trussMembers.push({ mesh: lastFloor, kind: 'floorBeam', x0: x1 });
+        }
+        if (index % 2 === 0) {
+          const b1 = getBottom(x0, -TRUSS_Z);
+          const b2 = getBottom(x1, TRUSS_Z);
+          const b3 = getBottom(x0, TRUSS_Z);
+          const b4 = getBottom(x1, -TRUSS_Z);
+          const useCross = index % 4 === 0;
+          if (useCross) {
+            const latA = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
+            trussMembers.push({ mesh: latA, kind: 'bottomLateral', x0, x1 });
+            const latB = beamBetween(trussGroup, b3, b4, lateralThickness, materials.orangeHot);
+            trussMembers.push({ mesh: latB, kind: 'bottomLateral', x0, x1 });
+          } else {
+            const lat = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
+            trussMembers.push({ mesh: lat, kind: 'bottomLateral', x0, x1 });
+          }
+          const t1 = getTop(x0, -TRUSS_Z);
+          const t2 = getTop(x1, TRUSS_Z);
+          const topLat = beamBetween(trussGroup, t1, t2, .22, materials.orangeDark);
+          topLat.material.transparent = true; topLat.material.opacity = .45;
+          trussMembers.push({ mesh: topLat, kind: 'topLateral', x0, x1 });
+        } else {
+          const b1 = getBottom(x0, TRUSS_Z);
+          const b2 = getBottom(x1, -TRUSS_Z);
+          const lat = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
+          trussMembers.push({ mesh: lat, kind: 'bottomLateral', x0, x1 });
+          const t1 = getTop(x0, TRUSS_Z);
+          const t2 = getTop(x1, -TRUSS_Z);
+          const topLat = beamBetween(trussGroup, t1, t2, .22, materials.orangeDark);
+          topLat.material.transparent = true; topLat.material.opacity = .45;
+          trussMembers.push({ mesh: topLat, kind: 'topLateral', x0, x1 });
+        }
+      }
+      trussGroup.userData.panelCount = panelCount;
+    }
+
+    function updateTrussGeometry(response) {
+      if (!trussGroup || !trussMembers.length) return;
+      const getTop = (x, z) => getDeckPoint(x, z, response);
+      const getBottom = (x, z) => {
+        const top = getDeckPoint(x, z, response);
+        return new THREE.Vector3(top.x, top.y - TRUSS_DEPTH, top.z);
+      };
+      const tmpStart = new THREE.Vector3();
+      const tmpDir = new THREE.Vector3();
+      function placeBeam(mesh, start, end) {
+        const vector = tmpDir.subVectors(end, start);
+        const length = vector.length();
+        if (length < 0.001) return;
+        mesh.position.copy(tmpStart.copy(start).add(end).multiplyScalar(.5));
+        mesh.scale.set(length, 1, 1);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
+      }
+      let bottomLateralCounter = 0;
+      for (const item of trussMembers) {
+        const { mesh, kind, side, x0, x1, z } = item;
+        if (kind === 'topChord') placeBeam(mesh, getTop(x0, z), getTop(x1, z));
+        else if (kind === 'bottomChord') placeBeam(mesh, getBottom(x0, z), getBottom(x1, z));
+        else if (kind === 'vertical') placeBeam(mesh, getTop(x0, z), getBottom(x0, z));
+        else if (kind === 'diagonal') {
+          if (item.index % 2 === 0) placeBeam(mesh, getBottom(x0, z), getTop(x1, z));
+          else placeBeam(mesh, getTop(x0, z), getBottom(x1, z));
+        } else if (kind === 'floorBeam') placeBeam(mesh, getTop(x0, -TRUSS_Z), getTop(x0, TRUSS_Z));
+        else if (kind === 'bottomLateral') {
+          const idx = Math.round((x0 - SUSPENSION_START) / TRUSS_PANEL);
+          const isCrossPanel = idx % 4 === 0;
+          if (isCrossPanel) {
+            if (bottomLateralCounter % 2 === 0) placeBeam(mesh, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
+            else placeBeam(mesh, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
+            bottomLateralCounter += 1;
+          } else {
+            if (idx % 2 === 0) placeBeam(mesh, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
+            else placeBeam(mesh, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
+          }
+        } else if (kind === 'topLateral') {
+          const idx = Math.round((x0 - SUSPENSION_START) / TRUSS_PANEL);
+          if (idx % 2 === 0) placeBeam(mesh, getTop(x0, -TRUSS_Z), getTop(x1, TRUSS_Z));
+          else placeBeam(mesh, getTop(x0, TRUSS_Z), getTop(x1, -TRUSS_Z));
+        }
+      }
+    }
+
+    function createTower(x) {
+      const tower = new THREE.Group();
+      tower.name = x < 0 ? 'South Tower' : 'North Tower';
+      tower.position.set(x, 0, 0);
+      tower.userData.baseX = x;
+      towerGroup.add(tower);
+
+      const legCenterY = (FOUNDATION_BOTTOM_Y + TOWER_TOP_Y) / 2;
+      const leftLeg = createBox(tower, shared.towerLegGeometry, materials.orangeSteel, 0, legCenterY, -3.4);
+      const rightLeg = createBox(tower, shared.towerLegGeometry, materials.orangeSteel, 0, legCenterY, 3.4);
+      leftLeg.castShadow = rightLeg.castShadow = true;
+      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y - 1.2, 0);
+      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y + 25, 0);
+      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y + 49, 0);
+      createBox(tower, shared.towerCapGeometry, materials.orangeSteel, 0, TOWER_TOP_Y - 1.2, 0);
+      createBox(tower, new THREE.BoxGeometry(4.8, 2.2, 9.2), materials.orangeDark, 0, FOUNDATION_BOTTOM_Y + 1.1, 0);
+
+      const braceMaterial = materials.orangeHot;
+      for (const y of [DECK_Y + 7, DECK_Y + 30, DECK_Y + 48]) {
+        beamBetween(tower, new THREE.Vector3(-1.55, y - 4, -3.05), new THREE.Vector3(-1.55, y + 4, 3.05), .32, braceMaterial);
+        beamBetween(tower, new THREE.Vector3(1.55, y - 4, 3.05), new THREE.Vector3(1.55, y + 4, -3.05), .32, braceMaterial);
+      }
+      for (const z of [-3.4, 3.4]) {
+        createBox(tower, new THREE.BoxGeometry(4.4, 2.2, 2.8), materials.orangeDark, 0, FOUNDATION_BOTTOM_Y + 1.1, z);
+        createBox(tower, new THREE.BoxGeometry(4.8, 1.4, 2.8), materials.orangeSteel, 0, TOWER_TOP_Y - 2.1, z);
+      }
+      towerReferences.push({ tower, x });
+    }
+
+    function createAnchorages() {
+      // Real GGB: massive gravity anchorage ~20k m3, 530 MN, three interlocking concrete blocks below deck
+      // Previously showed as orange cubes over the deck — now modelled below deck as concrete mass with splay housing
+      for (const x of [SUSPENSION_START, SUSPENSION_END]) {
+        const group = new THREE.Group();
+        group.name = x < 0 ? 'San Francisco anchorage' : 'Marin anchorage';
+        const direction = x < 0 ? 1 : -1;
+        // Main gravity block below deck (concrete) - bulk of the 182,000 yd3 for anchorages/pylons/housing
+        createBox(group, new THREE.BoxGeometry(42, 16, 30), materials.anchorageConcrete, x + direction * 10, 4, 0);
+        // Foundation footing deeper
+        createBox(group, new THREE.BoxGeometry(46, 6, 32), materials.anchorageRoof, x + direction * 10, -5, 0);
+        // Cable housing / splay chamber just below deck where cables fan to eye-bars
+        createBox(group, new THREE.BoxGeometry(14, 7, 16), materials.anchorageRoof, x + direction * 4, 15.5, 0);
+        // Small portal where cables enter housing (two openings)
+        for (const side of [-1, 1]) {
+          const cz = side * CABLE_Z;
+          // Eye-bar splay: diagonal from cable at ANCHORAGE_CABLE_Y down into block
+          const top = new THREE.Vector3(x, ANCHORAGE_CABLE_Y, cz);
+          const bottom = new THREE.Vector3(x + direction * 12, 7, cz * 0.35);
+          beamBetween(group, top, bottom, 0.42, materials.cable);
+          // Housing portal frame
+          createBox(group, new THREE.BoxGeometry(0.6, 3.2, 2.2), materials.anchorageConcrete, x, ANCHORAGE_CABLE_Y - 1.2, cz);
+        }
+        // Approach slab tying deck over anchorage (deck already at DECK_Y)
+        createBox(group, new THREE.BoxGeometry(18, 0.9, DECK_WIDTH + 1), materials.asphalt, x + direction * 2, DECK_Y - 0.45, 0);
+        group.position.y = 0;
+        bridgeGroup.add(group);
+      }
+    }
+
+    /* Cable generation */
+    function createMainCables() {
+      for (const side of [-1, 1]) {
+        const points = [];
+        const positions = new Float32Array(CABLE_POINT_COUNT * 3);
+        for (let index = 0; index < CABLE_POINT_COUNT; index += 1) {
+          const x = SUSPENSION_START + index * CABLE_STEP;
+          const y = cableHeight(x);
+          points.push(new THREE.Vector3(x, y, side * CABLE_Z));
+          positions[index * 3] = x;
+          positions[index * 3 + 1] = y;
+          positions[index * 3 + 2] = side * CABLE_Z;
+        }
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const line = new THREE.Line(lineGeometry, makeLineMaterial(0xffc48d, .96, 3));
+        line.name = `Animated main cable ${side}`;
+        line.userData.side = side;
+        bridgeGroup.add(line);
+        cableLines.push(line);
+
+        const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
+        const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, CABLE_POINT_COUNT - 1, CABLE_RADIUS, 6, false), materials.cable);
+        tube.name = `Main cable sleeve ${side}`;
+        tube.userData.side = side;
+        tube.castShadow = true;
+        tube.receiveShadow = true;
+        bridgeGroup.add(tube);
+        cableTubes.push(tube);
+
+        for (let x = SUSPENSION_START + CABLE_STEP; x < SUSPENSION_END; x += CABLE_STEP) {
+          if (Math.abs(Math.abs(x) - TOWER_X) < CABLE_STEP * .6) continue;
+          const suspenderPositions = new Float32Array(6);
+          const deck = getDeckPoint(x, side * DECK_CABLE_ATTACH_Z, currentResponse);
+          suspenderPositions[0] = deck.x; suspenderPositions[1] = deck.y; suspenderPositions[2] = deck.z;
+          suspenderPositions[3] = x; suspenderPositions[4] = cableHeight(x); suspenderPositions[5] = side * CABLE_Z;
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(suspenderPositions, 3));
+          const suspender = new THREE.Line(geometry, makeLineMaterial(0xf0bc88, .8, 1));
+          suspender.userData = { x, side };
+          bridgeGroup.add(suspender);
+          suspenders.push(suspender);
+        }
+      }
+    }
+
+    function createRoadLighting() {
+      for (let x = SUSPENSION_START + 25; x <= SUSPENSION_END - 25; x += 45) {
+        for (const side of [-1, 1]) {
+          const z = side * (DECK_WIDTH / 2 - .25);
+          const pole = createBox(bridgeGroup, shared.poleGeometry, materials.lampPole, x, DECK_Y + 4.25, z);
+          pole.castShadow = true;
+          pole.userData.centerX = x; pole.userData.baseZ = z; pole.userData.baseY = 4.25;
+          const lamp = createBox(bridgeGroup, shared.lampGeometry, materials.bridgeLight, x, DECK_Y + 8.6, z);
+          lamp.userData.centerX = x; lamp.userData.baseZ = z; lamp.userData.baseY = 8.6; lamp.userData.bridgeLamp = true;
+        }
+      }
+    }
+
+    function createBridgeSigns() {
+      for (const x of [SUSPENSION_START + 75, SUSPENSION_END - 75]) {
+        const z = -(DECK_WIDTH / 2 + .35);
+        const sign = createBox(bridgeGroup, new THREE.BoxGeometry(5, 2.8, .18), materials.sign, x, DECK_Y + 7.3, z);
+        sign.rotation.y = x < 0 ? -.12 : .12;
+        sign.userData.centerX = x; sign.userData.baseZ = z; sign.userData.baseY = 7.3;
+        const postA = createBox(bridgeGroup, new THREE.BoxGeometry(.16, 6, .16), materials.lampPole, x - 1.8, DECK_Y + 3.2, z);
+        const postB = createBox(bridgeGroup, new THREE.BoxGeometry(.16, 6, .16), materials.lampPole, x + 1.8, DECK_Y + 3.2, z);
+        postA.rotation.y = postB.rotation.y = sign.rotation.y;
+        postA.userData.centerX = x - 1.8; postA.userData.baseZ = z; postA.userData.baseY = 3.2;
+        postB.userData.centerX = x + 1.8; postB.userData.baseZ = z; postB.userData.baseY = 3.2;
+      }
+    }
+
+    function getDeckPoint(x, z = 0, response = currentResponse) {
+      const position = clamp(x, SUSPENSION_START, SUSPENSION_END);
+      const shape = deckShape(position);
+      const longitudinal = response.longitudinal * .22 * (position / ANCHORAGE_X);
+      const torsion = response.rotation * (z / 30) * .035;
+      return new THREE.Vector3(position + longitudinal, DECK_Y + response.vertical * shape, z + response.lateral * shape + torsion);
+    }
+
+    function updateDeckGeometry(response) {
+      const axis = new THREE.Vector3(1, 0, 0);
+      const previous = new THREE.Vector3();
+      const next = new THREE.Vector3();
+      for (const object of bridgeGroup.children) {
+        if (!object.userData || !Number.isFinite(object.userData.centerX)) continue;
+        const x = object.userData.centerX;
+        if (object.userData.centerX === undefined) continue;
+        if (object.userData.centerX < SUSPENSION_START || object.userData.centerX > SUSPENSION_END) continue;
+        const baseZ = Number.isFinite(object.userData.baseZ) ? object.userData.baseZ : 0;
+        const p = getDeckPoint(x, baseZ, response);
+        p.y += Number.isFinite(object.userData.baseY) ? object.userData.baseY : 0;
+        previous.copy(getDeckPoint(x - 4.8, baseZ, response));
+        next.copy(getDeckPoint(x + 4.8, baseZ, response));
+        const tangent = next.sub(previous).normalize();
+        object.position.copy(p);
+        object.quaternion.setFromUnitVectors(axis, tangent);
+      }
+      for (const segment of deckSegments) {
+        const p = getDeckPoint(segment.userData.centerX, 0, response);
+        const before = getDeckPoint(segment.userData.centerX - 5, 0, response);
+        const after = getDeckPoint(segment.userData.centerX + 5, 0, response);
+        segment.position.copy(p);
+        segment.quaternion.setFromUnitVectors(axis, after.sub(before).normalize());
+      }
+      updateTrussGeometry(response);
+    }
+
+    /* Approaches, terrain, and city generation */
+    function buildEnvironment() {
+      environmentGroup = new THREE.Group();
+      environmentGroup.name = 'San Francisco and Marin context';
+      scene.add(environmentGroup);
+      shared.hillGeometry = new THREE.ConeGeometry(1, 1, 8);
+      shared.rockGeometry = new THREE.DodecahedronGeometry(1, 1);
+      shared.buildingGeometry = new THREE.BoxGeometry(1, 1, 1);
+      shared.windowGeometry = new THREE.BoxGeometry(.45, .24, .06);
+      shared.treeGeometry = new THREE.ConeGeometry(1, 3.3, 7);
+      shared.trunkGeometry = new THREE.CylinderGeometry(.18, .24, 1.2, 6);
+
+      createLandMasses();
+      createApproaches();
+      createFortPoint();
+      createCity();
+      createHeadlands();
+      createShoreline();
+    }
+
+    function createLandMasses() {
+      createBox(environmentGroup, new THREE.BoxGeometry(270, 7, 240), materials.presidio, -405, -2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(270, 7, 260), materials.headland, 405, -2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(1050, 2, 700), materials.bayFloor, 0, FOUNDATION_BOTTOM_Y - 1, 0);
+      const waterfront = createBox(environmentGroup, new THREE.BoxGeometry(150, 2, 60), materials.shore, -285, 1, -75);
+      waterfront.rotation.y = -.08;
+    }
+
+    function createApproaches() {
+      for (const side of [-1, 1]) {
+        const rampCenter = side < 0 ? -APPROACH_CENTER_X : APPROACH_CENTER_X;
+        const ramp = createBox(environmentGroup, new THREE.BoxGeometry(APPROACH_LENGTH, 1.7, DECK_WIDTH), materials.asphalt, rampCenter, APPROACH_CENTER_Y, 0);
+        ramp.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
+        for (const z of [-2.7, -.9, .9, 2.7]) {
+          for (let index = 1; index < 9; index += 1) {
+            const progress = index / 9;
+            const x = side < 0 ? -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH : BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
+            const y = APPROACH_END_Y + progress * (DECK_Y - APPROACH_END_Y);
+            const mark = createBox(environmentGroup, shared.laneGeometry, materials.laneWhite, x, y + .7, z);
+            mark.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
+          }
+        }
+        for (const z of [-(DECK_WIDTH / 2 + .8), DECK_WIDTH / 2 + .8]) {
+          const rail = createBox(environmentGroup, new THREE.BoxGeometry(APPROACH_LENGTH, .45, .25), materials.orangeSteel, rampCenter, APPROACH_CENTER_Y + 3.2, z);
+          rail.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
+        }
+      }
+      for (let index = 0; index <= 4; index += 1) {
+        const progress = (index + .5) / 5;
+        const y = APPROACH_END_Y + progress * (DECK_Y - APPROACH_END_Y);
+        const leftX = -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH;
+        const rightX = BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
+        for (const z of [-(DECK_WIDTH / 2 + 2.4), DECK_WIDTH / 2 + 2.4]) {
+          createStreetLight(leftX, y + 4.25, z);
+          createStreetLight(rightX, y + 4.25, z);
+        }
+      }
+    }
+
+    function createStreetLight(x, y, z) {
+      createBox(environmentGroup, shared.poleGeometry, materials.lampPole, x, y, z);
+      createBox(environmentGroup, shared.lampGeometry, materials.bridgeLight, x, y + 4.5, z);
+    }
+
+    function createFortPoint() {
+      const fort = new THREE.Group();
+      fort.name = 'Fort Point inspired structure';
+      fort.position.set(-255, 2, -45);
+      createBox(fort, new THREE.BoxGeometry(53, 15, 44), materials.fort, 0, 6, 0);
+      createBox(fort, new THREE.BoxGeometry(58, 4, 49), materials.fortRoof, 0, 15, 0);
+      for (const x of [-21, 21]) {
+        for (const z of [-16, 16]) createBox(fort, new THREE.BoxGeometry(7, 23, 7), materials.fort, x, 11, z);
+      }
+      for (const x of [-18, -9, 0, 9, 18]) {
+        for (const z of [-22.3, 22.3]) createBox(fort, new THREE.BoxGeometry(3.3, 3.4, .3), materials.fortWindow, x, 9, z);
+      }
+      environmentGroup.add(fort);
+    }
+
+    function createCity() {
+      const random = seeded(90210);
+      const count = 48;
+      const buildings = new THREE.InstancedMesh(shared.buildingGeometry, materials.building, count);
+      const windows = new THREE.InstancedMesh(shared.windowGeometry, materials.window, 280);
+      buildings.name = 'Procedural San Francisco skyline';
+      windows.name = 'Distant illuminated windows';
+      const matrix = new THREE.Matrix4();
+      let windowIndex = 0;
+      for (let i = 0; i < count; i += 1) {
+        const x = -455 + random() * 120;
+        const z = -112 + random() * 224;
+        const width = 7 + random() * 14;
+        const depth = 7 + random() * 16;
+        const height = 12 + random() * 55 * (1 - Math.abs(z) / 250);
+        matrix.compose(new THREE.Vector3(x, height / 2 + 1, z), new THREE.Quaternion(), new THREE.Vector3(width, height, depth));
+        buildings.setMatrixAt(i, matrix);
+        for (let row = 0; row < Math.floor(height / 7) && windowIndex < 280; row += 1) {
+          for (const side of [-1, 1]) {
+            const wx = x + (random() - .5) * width * .6;
+            const wz = z + side * (depth / 2 + .05);
+            matrix.compose(new THREE.Vector3(wx, 5 + row * 7, wz), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1));
+            windows.setMatrixAt(windowIndex++, matrix);
+          }
+        }
+      }
+      windows.count = windowIndex;
+      buildings.instanceMatrix.needsUpdate = true;
+      windows.instanceMatrix.needsUpdate = true;
+      buildings.castShadow = true;
+      buildings.receiveShadow = true;
+      environmentGroup.add(buildings, windows);
+
+      const pyramid = new THREE.Mesh(new THREE.ConeGeometry(13, 62, 4), materials.pyramid);
+      pyramid.name = 'Transamerica inspired silhouette';
+      pyramid.position.set(-390, 32, 6);
+      pyramid.rotation.y = Math.PI / 4;
+      pyramid.castShadow = true;
+      pyramid.receiveShadow = true;
+      environmentGroup.add(pyramid);
+      for (const z of [-98, -66, 66, 98]) {
+        for (let x = -478; x < -270; x += 38) createTree(x, 5, z, .8 + random() * .5);
+      }
+    }
+
+    function createTree(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      const trunk = createBox(group, shared.trunkGeometry, materials.trunk, 0, .6, 0);
+      const canopy = new THREE.Mesh(shared.treeGeometry, materials.tree);
+      canopy.position.y = 2.5; canopy.scale.set(scale, scale, scale);
+      canopy.castShadow = true;
+      canopy.receiveShadow = true;
+      group.add(canopy);
+      environmentGroup.add(group);
+    }
+
+    function createHeadlands() {
+      const random = seeded(441);
+      for (let i = 0; i < 17; i += 1) {
+        const x = 290 + random() * 220;
+        const z = (random() > .5 ? 1 : -1) * (50 + random() * 90);
+        const hill = new THREE.Mesh(shared.hillGeometry, materials.headlandRock);
+        hill.position.set(x, 15 + random() * 17, z);
+        hill.scale.set(30 + random() * 48, 30 + random() * 45, 26 + random() * 44);
+        hill.rotation.y = random() * TAU;
+        hill.castShadow = true;
+        hill.receiveShadow = true;
+        environmentGroup.add(hill);
+        for (let tree = 0; tree < 3; tree += 1) createTree(x + random() * 30 - 15, 13, z + random() * 28 - 14, .65 + random() * .55);
+      }
+      for (const z of [-111, 111]) {
+        const wall = createBox(environmentGroup, new THREE.BoxGeometry(150, 9, 3), materials.retaining, 350, 8, z);
+        wall.rotation.y = z < 0 ? -.12 : .12;
+      }
+    }
+
+    function createShoreline() {
+      for (const z of [-82, 82]) {
+        const points = [];
+        for (let i = 0; i < 26; i += 1) points.push(new THREE.Vector3(-350 + i * 18, 1.2, z + Math.sin(i * .7) * 4));
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        environmentGroup.add(new THREE.Line(geometry, makeLineMaterial(0xd4e6d2, .55, 2)));
+      }
+      for (let x = -335; x <= -255; x += 16) {
+        const pier = createBox(environmentGroup, new THREE.BoxGeometry(10, 2, 56), materials.pier, x, 1, -95);
+        pier.rotation.y = .05;
+      }
+    }
+
+    /* San Francisco Bay realistic water shader */
+    function buildWater() {
+      waterGroup = new THREE.Group();
+      waterGroup.name = 'Animated San Francisco Bay water';
+      scene.add(waterGroup);
+      waterUniforms = {
+        uTime: { value: 0 },
+        uWind: { value: .25 },
+        uSunDir: { value: new THREE.Vector3(-0.45, 0.65, 0.35).normalize() },
+        uSunColor: { value: new THREE.Color(0xfffaec) },
+        uSkyColor: { value: new THREE.Color(0x68b5f8) },
+        uDeepColor: { value: new THREE.Color(0x0e475e) },
+        uBayColor: { value: new THREE.Color(0x1d6f88) },
+        uShallowColor: { value: new THREE.Color(0x2da4ba) },
+        uFoamColor: { value: new THREE.Color(0xf2f9fa) }
+      };
+      try {
+        waterMaterial = new THREE.ShaderMaterial({
+          uniforms: waterUniforms,
+          vertexShader: `
+            uniform float uTime;
+            uniform float uWind;
+            varying vec3 vWorld;
+            varying float vWaveHeight;
+
+            void main() {
+              vec3 p = position;
+              vec2 worldXZ = p.xz;
+
+              // Smooth, non-aliasing multi-harmonic Pacific swell
+              float w1 = sin(worldXZ.x * 0.015 + worldXZ.y * 0.010 + uTime * 0.85) * (0.32 + uWind * 0.45);
+              float w2 = cos(worldXZ.x * 0.024 - worldXZ.y * 0.019 + uTime * 1.15) * (0.20 + uWind * 0.30);
+              float w3 = sin(worldXZ.x * 0.040 + worldXZ.y * 0.032 - uTime * 1.55) * (0.10 + uWind * 0.15);
+              p.y += w1 + w2 + w3;
+
+              vec4 worldPos = modelMatrix * vec4(p, 1.0);
+              vWorld = worldPos.xyz;
+              vWaveHeight = w1 + w2 + w3;
+
+              gl_Position = projectionMatrix * viewMatrix * worldPos;
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 uSunDir;
+            uniform vec3 uSunColor;
+            uniform vec3 uSkyColor;
+            uniform vec3 uDeepColor;
+            uniform vec3 uBayColor;
+            uniform vec3 uShallowColor;
+            uniform vec3 uFoamColor;
+            uniform float uTime;
+            uniform float uWind;
+
+            varying vec3 vWorld;
+            varying float vWaveHeight;
+
+            // Analytical 2D gradient noise for continuous fluid waves without grid or stripe artifacts
+            vec2 hash2(vec2 p) {
+              p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+              return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+            }
+
+            vec3 gradNoise(vec2 p) {
+              vec2 i = floor(p);
+              vec2 f = fract(p);
+              vec2 u = f * f * (3.0 - 2.0 * f);
+              vec2 du = 6.0 * f * (1.0 - f);
+
+              vec2 ga = hash2(i + vec2(0.0, 0.0));
+              vec2 gb = hash2(i + vec2(1.0, 0.0));
+              vec2 gc = hash2(i + vec2(0.0, 1.0));
+              vec2 gd = hash2(i + vec2(1.0, 1.0));
+
+              float va = dot(ga, f - vec2(0.0, 0.0));
+              float vb = dot(gb, f - vec2(1.0, 0.0));
+              float vc = dot(gc, f - vec2(0.0, 1.0));
+              float vd = dot(gd, f - vec2(1.0, 1.0));
+
+              float val = va + u.x * (vb - va) + u.y * (vc - va) + u.x * u.y * (va - vb - vc + vd);
+              vec2 dval = ga + u.x * (gb - ga) + u.y * (gc - ga) + u.x * u.y * (ga - gb - gc + gd) + du * (u.yx * (va - vb - vc + vd) + vec2(vb - va, vc - va));
+              return vec3(val, dval);
+            }
+
+            const mat2 m2 = mat2(0.80, 0.60, -0.60, 0.80);
+
+            void main() {
+              vec2 pos = vWorld.xz;
+              float speed = 1.0 + uWind * 0.75;
+
+              vec2 slope = vec2(0.0);
+              vec2 p = pos * 0.035;
+
+              // 4 domain-rotated octaves: organic, natural, zero stripe/checker artifacts
+              vec3 n1 = gradNoise(p + vec2(uTime * 0.08 * speed, uTime * 0.05 * speed));
+              slope += n1.yz * 0.40;
+
+              p = m2 * p * 2.15;
+              vec3 n2 = gradNoise(p - vec2(uTime * 0.12 * speed, -uTime * 0.09 * speed));
+              slope += n2.yz * 0.25;
+
+              p = m2 * p * 2.30;
+              vec3 n3 = gradNoise(p + vec2(-uTime * 0.18 * speed, uTime * 0.14 * speed));
+              slope += n3.yz * 0.14;
+
+              p = m2 * p * 2.45;
+              vec3 n4 = gradNoise(p + vec2(uTime * 0.28 * speed, uTime * 0.22 * speed));
+              slope += n4.yz * 0.07;
+
+              vec3 N = normalize(vec3(-slope.x * 0.35, 1.0, -slope.y * 0.35));
+
+              vec3 V = normalize(cameraPosition - vWorld);
+              vec3 L = normalize(uSunDir);
+              vec3 H = normalize(L + V);
+
+              float NdotV = max(0.0, dot(N, V));
+              float NdotL = max(0.0, dot(N, L));
+              float NdotH = max(0.0, dot(N, H));
+
+              // Minimum 24% Fresnel reflectance so top-down views retain luminous sky blue
+              float fresnel = clamp(0.24 + 0.76 * pow(clamp(1.0 - NdotV, 0.0, 1.0), 3.5), 0.0, 1.0);
+
+              // Sunlight specular glitter
+              float spec1 = pow(NdotH, 180.0) * 3.2;
+              float spec2 = pow(NdotH, 24.0) * 0.45;
+              vec3 specular = uSunColor * (spec1 + spec2) * NdotL;
+
+              // Subsurface scattering on wave crests
+              float sss = pow(max(0.0, dot(V, -(L + N * 0.35))), 3.0) * (0.35 + uWind * 0.45);
+              vec3 sssColor = vec3(0.12, 0.65, 0.62) * sss;
+
+              // Vibrant bay water depth color
+              vec3 waterBase = mix(uDeepColor, uBayColor, clamp(0.5 + N.y * 0.5 + vWaveHeight * 0.3, 0.0, 1.0));
+              waterBase = mix(waterBase, uShallowColor, clamp(vWaveHeight * 0.7 + 0.3, 0.0, 1.0));
+
+              // Sky reflection
+              vec3 skyRefl = mix(uSkyColor, vec3(0.96, 0.98, 1.0), pow(clamp(1.0 - NdotV, 0.0, 1.0), 2.0) * 0.40);
+              vec3 finalColor = mix(waterBase, skyRefl, fresnel * 0.82) + specular + sssColor;
+
+              // Gentle whitecaps on high wind
+              float foamNoise = clamp(n3.x * 0.5 + 0.5 + n4.x * 0.3, 0.0, 1.0);
+              float foamCrest = clamp((vWaveHeight - 0.20) / 0.25, 0.0, 1.0);
+              float foamAmount = foamCrest * foamNoise * clamp((uWind - 0.25) * 2.5, 0.0, 1.0);
+
+              vec3 outColor = mix(finalColor, uFoamColor, foamAmount * 0.65);
+              float alpha = mix(0.94, 0.98, clamp(fresnel + foamAmount, 0.0, 1.0));
+
+              gl_FragColor = vec4(outColor, alpha);
+            }
+          `,
+          transparent: true,
+          side: THREE.DoubleSide
+        });
+      } catch (error) {
+        addWarning('Water shader fallback active');
+        waterMaterial = new THREE.MeshStandardMaterial({ color: 0x1d6f88, roughness: .18, metalness: .15, transparent: true, opacity: .94 });
+      }
+      const waterGeometry = new THREE.PlaneGeometry(1400, 900, 160, 100);
+      waterGeometry.rotateX(-Math.PI / 2);
+      waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+      waterMesh.position.set(0, 0, 0);
+      waterMesh.receiveShadow = true;
+      waterMesh.name = 'Bay surface';
+      waterGroup.add(waterMesh);
+      for (const z of [-105, 105]) {
+        const foam = new THREE.Mesh(new THREE.TorusGeometry(92, .18, 4, 40, Math.PI * .72), materials.foam);
+        foam.rotation.x = Math.PI / 2;
+        foam.position.set(-280, .8, z);
+        waterGroup.add(foam);
+      }
+      createBoats();
+    }
+
+    function createBoats() {
+      const paths = [
+        { type: 'sailboat', z: -135, y: 3, speed: 7, offset: -100 },
+        { type: 'motorboat', z: 132, y: 2.4, speed: 15, offset: 70 },
+        { type: 'ferry', z: -165, y: 4, speed: 9, offset: -260 },
+        { type: 'cargo', z: 190, y: 6, speed: 4, offset: 180 }
+      ];
+      for (const path of paths) {
+        const boat = new THREE.Group();
+        boat.name = path.type;
+        const hull = createBox(boat, path.type === 'cargo' ? new THREE.BoxGeometry(25, 4, 7) : new THREE.BoxGeometry(path.type === 'ferry' ? 18 : 9, 2.3, path.type === 'sailboat' ? 3 : 4.5), path.type === 'cargo' ? materials.cargo : materials.boatHull, 0, 0, 0);
+        hull.rotation.z = .02;
+        if (path.type === 'sailboat') {
+          createBox(boat, new THREE.BoxGeometry(.22, 12, .22), materials.mast, 0, 6.5, 0);
+          const sail = new THREE.Mesh(new THREE.PlaneGeometry(5, 7), materials.sail);
+          sail.position.set(1.8, 5.8, 0); sail.rotation.y = Math.PI / 2;
+          sail.castShadow = true; sail.receiveShadow = true;
+          boat.add(sail);
+        } else if (path.type === 'ferry') {
+          createBox(boat, new THREE.BoxGeometry(12, 4.5, 5.2), materials.ferryCabin, -1, 3.4, 0);
+          for (let x = -5; x <= 4; x += 3) createBox(boat, new THREE.BoxGeometry(1.1, .8, .15), materials.window, x, 4.2, -2.66);
+        } else if (path.type === 'cargo') {
+          for (let x = -8; x <= 8; x += 4) createBox(boat, new THREE.BoxGeometry(3, 3, 6.2), materials.container, x, 3.5, 0);
+          createBox(boat, new THREE.BoxGeometry(3, 8, 5), materials.cargoCabin, 8, 6, 0);
+        } else {
+          createBox(boat, new THREE.BoxGeometry(3.5, 1.8, 3), materials.boatCabin, -1, 1.6, 0);
+        }
+        const wake = new THREE.Mesh(new THREE.PlaneGeometry(path.type === 'cargo' ? 30 : 15, 1.3), materials.wake);
+        wake.rotation.x = -Math.PI / 2; wake.position.set(-8, -.05, 0); boat.add(wake);
+        boat.position.set(path.offset, path.y, path.z);
+        boat.userData = { ...path, baseZ: path.z };
+        waterGroup.add(boat);
+        boats.push(boat);
+      }
+    }
+
+    /* Structural display overlay */
+    function createStructuralOverlay() {
+      overlayGroup = new THREE.Group();
+      overlayGroup.name = 'Structural overlay';
+      scene.add(overlayGroup);
+      const nodePositions = new Float32Array(OVERLAY_NODE_COUNT * 3);
+      for (let i = 0; i < OVERLAY_NODE_COUNT; i += 1) nodePositions[i * 3] = SUSPENSION_START + i * OVERLAY_NODE_STEP;
+      const nodeGeometry = new THREE.BufferGeometry();
+      nodeGeometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
+      deckNodes = new THREE.Points(nodeGeometry, new THREE.PointsMaterial({ color: 0x62d7c7, size: 2.2, sizeAttenuation: true }));
+      overlayGroup.add(deckNodes);
+
+      const linePositions = new Float32Array(OVERLAY_NODE_COUNT * 3);
+      const lineGeometry = new THREE.BufferGeometry();
+      lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+      deckCenterLine = new THREE.Line(lineGeometry, makeLineMaterial(0x62d7c7, .85, 2));
+      overlayGroup.add(deckCenterLine);
+
+      const vectorPositions = new Float32Array(OVERLAY_NODE_COUNT * 6);
+      const vectorGeometry = new THREE.BufferGeometry();
+      vectorGeometry.setAttribute('position', new THREE.BufferAttribute(vectorPositions, 3));
+      displacementVectors = new THREE.LineSegments(vectorGeometry, makeLineMaterial(0xff806e, .85, 1));
+      overlayGroup.add(displacementVectors);
+
+      for (const x of [-TOWER_X, TOWER_X]) {
+        const reference = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, FOUNDATION_BOTTOM_Y, -(DECK_WIDTH / 2 + 2.4)), new THREE.Vector3(x, TOWER_TOP_Y, -(DECK_WIDTH / 2 + 2.4))]), makeLineMaterial(0x9fe2d7, .42, 1));
+        towerReferences.push({ reference, x });
+        overlayGroup.add(reference);
+      }
+    }
+
+    function updateStructuralOverlay(response) {
+      const nodes = deckNodes.geometry.attributes.position.array;
+      const line = deckCenterLine.geometry.attributes.position.array;
+      const vectors = displacementVectors.geometry.attributes.position.array;
+      for (let i = 0; i < OVERLAY_NODE_COUNT; i += 1) {
+        const x = SUSPENSION_START + i * OVERLAY_NODE_STEP;
+        const p = getDeckPoint(x, 0, response);
+        nodes[i * 3] = p.x; nodes[i * 3 + 1] = p.y + 1.3; nodes[i * 3 + 2] = p.z;
+        line[i * 3] = p.x; line[i * 3 + 1] = p.y + 1; line[i * 3 + 2] = p.z;
+        vectors[i * 6] = p.x; vectors[i * 6 + 1] = p.y; vectors[i * 6 + 2] = p.z;
+        vectors[i * 6 + 3] = p.x; vectors[i * 6 + 4] = p.y + response.vertical * .35; vectors[i * 6 + 5] = p.z + response.lateral * .35;
+      }
+      deckNodes.geometry.attributes.position.needsUpdate = true;
+      deckCenterLine.geometry.attributes.position.needsUpdate = true;
+      displacementVectors.geometry.attributes.position.needsUpdate = true;
+      displacementVectors.visible = state.vectors && state.overlay;
+      overlayGroup.visible = state.overlay;
+    }
+
+    /* Artificial Earthquake Accelerogram Generator (ported from SDOF-Seismic-Simulator)
+       Algorithm:
+       1. Stochastic band-limited signal in frequency domain [fMin, fMax] with random phases (Boore 1983).
+       2. Kanai-Tajimi resonant soil filter H(f) with site frequency fg and soil damping zetag.
+       3. Jennings-Housner duration-scaled trapezoidal envelope.
+       4. Two-pass baseline correction (Pass A: zero final velocity ramp, Pass B: zero final displacement parabola).
+       5. Scale to user target PGA.
+       6. Verifiable strong motion parameters (PGA, Arias Intensity Ia, Significant Duration D5-95).
+    */
+    let currentGroundMotion = null;
+
+    function baselineCorrect(ug, dt) {
+      const n = ug.length;
+      const corrected = new Float64Array(ug);
+      const T = (n - 1) * dt || 1;
+      let velFinal = 0;
+      for (let i = 0; i < n; i++) {
+        velFinal += (i === 0 || i === n - 1 ? 0.5 : 1.0) * corrected[i] * dt;
+      }
+      const c0 = velFinal / T;
+      for (let i = 0; i < n; i++) corrected[i] -= c0;
+      const vel = new Float64Array(n);
+      const disp = new Float64Array(n);
+      for (let i = 1; i < n; i++) {
+        vel[i] = vel[i - 1] + 0.5 * (corrected[i] + corrected[i - 1]) * dt;
+        disp[i] = disp[i - 1] + 0.5 * (vel[i] + vel[i - 1]) * dt;
+      }
+      const dispFinal = disp[n - 1];
+      const c1 = 24.0 * dispFinal / Math.pow(T, 3);
+      const c2 = -36.0 * dispFinal / Math.pow(T, 4);
+      for (let i = 0; i < n; i++) {
+        const ti = i * dt;
+        corrected[i] -= (c1 * ti + c2 * ti * ti);
+      }
+      return corrected;
+    }
+
+    function generateSyntheticMotion(duration = 18, dt = 0.01, targetPGA = 0.30, frequencyType = 'mixed', seed = 17) {
+      const prng = seeded(seed);
+      const t = [];
+      const raw = [];
+      const n = Math.floor(duration / dt) + 1;
+      for (let i = 0; i < n; i++) t.push(i * dt);
+
+      // Frequency content and Kanai-Tajimi soil filter parameters
+      let fMin = 0.1, fMax = 25.0, fg = 1.5 + prng() * 1.5, zetag = 0.60;
+      if (frequencyType === 'low') {
+        fMin = 0.05; fMax = 12.0; fg = 0.85 + prng() * 0.45; zetag = 0.65;
+      } else if (frequencyType === 'medium') {
+        fMin = 0.1; fMax = 20.0; fg = 1.8 + prng() * 0.8; zetag = 0.60;
+      } else if (frequencyType === 'high') {
+        fMin = 0.2; fMax = 30.0; fg = 3.5 + prng() * 1.5; zetag = 0.55;
+      } else {
+        fMin = 0.1; fMax = 25.0; fg = 1.5 + prng() * 1.5; zetag = 0.60;
+      }
+
+      const nFreq = 300;
+      const df = (fMax - fMin) / (nFreq - 1);
+      const freqs = [];
+      const amps = [];
+      const phases = [];
+
+      for (let j = 0; j < nFreq; j++) {
+        const f = fMin + j * df;
+        const r = f / fg;
+        const kt = Math.sqrt((1 + 4 * zetag * zetag * r * r) / (Math.pow(1 - r * r, 2) + 4 * zetag * zetag * r * r));
+        freqs.push(f);
+        amps.push(kt * Math.sqrt(df));
+        phases.push(prng() * 2 * Math.PI);
+      }
+
+      // Jennings-Housner duration-scaled envelope
+      const tRise = Math.min(0.15 * duration, 4.0);
+      const tDecay = Math.min(0.20 * duration, 6.0);
+      const tPlateau = Math.max(0, duration - tRise - tDecay);
+
+      for (let i = 0; i < n; i++) {
+        const ti = t[i];
+        let env;
+        if (ti < tRise) {
+          env = Math.pow(ti / Math.max(tRise, 1e-4), 2);
+        } else if (ti < tRise + tPlateau) {
+          env = 1.0;
+        } else {
+          const trel = ti - tRise - tPlateau;
+          env = Math.exp(-2.5 * trel / Math.max(tDecay, 1e-4));
+        }
+
+        let signal = 0;
+        for (let j = 0; j < nFreq; j++) {
+          signal += amps[j] * Math.sin(2 * Math.PI * freqs[j] * ti + phases[j]);
+        }
+        raw.push(signal * env);
+      }
+
+      // Two-pass baseline correction (from SDOF-Seismic-Simulator)
+      // Pass A: Zero final velocity
+      let velFinal = 0;
+      for (let i = 0; i < n; i++) {
+        velFinal += (i === 0 || i === n - 1 ? 0.5 : 1.0) * raw[i] * dt;
+      }
+      const T = t[n - 1] || 1;
+      const cA = 2.0 * velFinal / (T * T);
+      for (let i = 0; i < n; i++) {
+        raw[i] -= cA * (T - t[i]);
+      }
+
+      // Pass B: Zero final displacement
+      const vel = new Float64Array(n);
+      const disp = new Float64Array(n);
+      for (let i = 1; i < n; i++) {
+        vel[i] = vel[i - 1] + 0.5 * (raw[i] + raw[i - 1]) * dt;
+        disp[i] = disp[i - 1] + 0.5 * (vel[i] + vel[i - 1]) * dt;
+      }
+      const dispFinal = disp[n - 1];
+      const cB = dispFinal / (T * T * T / 6.0);
+      for (let i = 0; i < n; i++) {
+        raw[i] -= cB * t[i];
+      }
+
+      // Step 5: Normalize to target PGA
+      let currentMax = 0;
+      for (let i = 0; i < n; i++) {
+        if (Math.abs(raw[i]) > currentMax) currentMax = Math.abs(raw[i]);
+      }
+
+      const pgaVal = (targetPGA !== undefined && targetPGA > 0) ? targetPGA * 9.81 : 0.30 * 9.81;
+      const factor = currentMax > 0 ? pgaVal / currentMax : 1;
+      const normFactor = currentMax > 0 ? 1 / currentMax : 1;
+
+      const ug = raw.map((v) => v * factor);
+      const ugNorm = raw.map((v) => v * normFactor);
+
+      // Integrate for ground velocity and displacement
+      const ug_v = new Float64Array(n);
+      const ug_disp = new Float64Array(n);
+      for (let i = 1; i < n; i++) {
+        ug_v[i] = ug_v[i - 1] + 0.5 * (ug[i] + ug[i - 1]) * dt;
+        ug_disp[i] = ug_disp[i - 1] + 0.5 * (ug_v[i] + ug_v[i - 1]) * dt;
+      }
+
+      // Strong Motion Parameters
+      const g = 9.81;
+      let peakAbsA = 0;
+      for (let i = 0; i < n; i++) {
+        if (Math.abs(ug[i]) > peakAbsA) peakAbsA = Math.abs(ug[i]);
+      }
+
+      let totalIa = 0;
+      const iaTimeHistory = new Float64Array(n);
+      for (let i = 0; i < n; i++) {
+        if (i > 0) {
+          const stepIa = (Math.PI / (2 * g)) * 0.5 * (ug[i] * ug[i] + ug[i - 1] * ug[i - 1]) * dt;
+          totalIa += stepIa;
+        }
+        iaTimeHistory[i] = totalIa;
+      }
+
+      let t5 = 0, t95 = 0;
+      for (let i = 0; i < n; i++) {
+        if (iaTimeHistory[i] >= 0.05 * totalIa && t5 === 0) t5 = t[i];
+        if (iaTimeHistory[i] >= 0.95 * totalIa && t95 === 0) t95 = t[i];
+      }
+
+      return {
+        t,
+        ug,
+        ugNorm,
+        ug_v,
+        ug_disp,
+        dt,
+        duration,
+        fg,
+        zetag,
+        pga: peakAbsA / g,
+        ariasIntensity: totalIa,
+        significantDuration: Math.max(0, t95 - t5)
+      };
+    }
+
+    function updateSyntheticEarthquake() {
+      currentGroundMotion = generateSyntheticMotion(state.eqDuration, 0.01, state.pga, state.eqFrequency, state.seed);
+    }
+
+    function earthquakeSignal(time) {
+      if (!currentGroundMotion || currentGroundMotion.duration !== state.eqDuration) {
+        updateSyntheticEarthquake();
+      }
+      if (state.earthquake) {
+        if (state.eqClock <= state.eqDuration && currentGroundMotion) {
+          const motion = currentGroundMotion;
+          const idx = Math.min(Math.floor(state.eqClock / motion.dt), motion.ugNorm.length - 2);
+          if (idx >= 0) {
+            const frac = (state.eqClock - idx * motion.dt) / motion.dt;
+            const sig = motion.ugNorm[idx] * (1 - frac) + motion.ugNorm[idx + 1] * frac;
+            return clamp(sig, -1, 1);
+          }
+        }
+        return 0;
+      }
+      if (state.eqResidualClock < 12) {
+        const frequency = { low: 0.55, medium: 1.05, high: 2.15, mixed: 1.0 }[state.eqFrequency] || 1;
+        const free = Math.sin((state.eqClock + state.eqResidualClock) * frequency * TAU + state.seed * 0.13) * Math.exp(-state.eqResidualClock * state.damping * 0.85);
+        return clamp(free * 0.5, -1, 1);
+      }
+      return 0;
+    }
+
+    function calculateResponse(time, dt) {
+      if (state.earthquake) {
+        state.eqClock += dt;
+        if (state.eqClock >= state.eqDuration) {
+          state.earthquake = false;
+          state.eqResidualClock = 0;
+          showToast('Earthquake input ended; free vibration is decaying.');
+          updateButtons();
+          updateAudio();
+        }
+      } else if (state.eqResidualClock < 12) {
+        state.eqResidualClock += dt;
+      }
+      if (state.windstorm) {
+        state.windClock += dt;
+        if (state.windClock >= state.windDuration) {
+          state.windstorm = false;
+          if (state.environment === 'storm') {
+            state.preStormEnvironment = state.environment;
+            $('environmentSelect').value = state.environment;
+            applyEnvironment(true);
+          }
+          showToast('Windstorm duration complete.');
+          updateButtons();
+          updateAudio();
+        }
+      }
+
+      const eqSignal = earthquakeSignal(time);
+      const pgaNorm = clamp(state.pga / 1.5, 0, 1);
+      const direction = state.eqDirection;
+      let eqLong = 0, eqLat = 0, eqVert = 0;
+      if (direction === 'longitudinal' || direction === 'combined') eqLong = eqSignal * pgaNorm;
+      if (direction === 'transverse' || direction === 'combined') eqLat = eqSignal * pgaNorm;
+      if (direction === 'vertical' || direction === 'combined') eqVert = eqSignal * pgaNorm;
+
+      const windActive = state.windstorm;
+      let gust = state.windSpeed;
+      let windLat = 0;
+      let windLong = 0;
+      let windRot = 0;
+      if (windActive) {
+        const windWave = Math.sin(state.windClock * .72) * state.gust * .22 + smoothNoise(state.windClock * .8, 42) * state.turbulence * .12;
+        gust = clamp(state.windSpeed * (1 + windWave / 100), 0, 260);
+        const windNorm = clamp(gust / 200, 0, 1);
+        windLat = Math.sin(state.windDirection * degToRad) * windNorm * (0.65 + state.gust / 180);
+        windLong = Math.cos(state.windDirection * degToRad) * windNorm * .28;
+        windRot = Math.sin(state.windClock * .48 + 1.2) * windNorm * (0.45 + state.turbulence / 180);
+      }
+
+      // Realistic FEM/SDOF branch (StructCalc stiffness + SDOF-Seismic-Simulator Newmark)
+      if (state.realisticPhysics && PHYSICS.sdof) {
+        // update damping if user changed it (live)
+        const zetaLive = clamp(state.damping, 0.02, 0.8);
+        for (const sys of Object.values(PHYSICS.sdof)) {
+          const omega = sys.omega;
+          sys.c = 2 * sys.m * omega * zetaLive;
+          sys.zeta = zetaLive;
+        }
+        const g = 9.81;
+        const dtSafe = Math.max(dt, 1e-4);
+        // ground accelerations per DOF (m/s2) from synthetic Boore/Kanai-Tajimi accelerogram
+        const agLat = (direction === 'transverse' || direction === 'combined') ? eqSignal * state.pga * g : 0;
+        const agVert = (direction === 'vertical' || direction === 'combined') ? eqSignal * state.pga * g : 0;
+        const agLong = (direction === 'longitudinal' || direction === 'combined') ? eqSignal * state.pga * g : 0;
+        // wind forces: q=0.5*rho*Cd*V^2, F = q * A * modal factor 0.5, A = deckWidth*length*0.6 (truss porosity)
+        let fWindLat = 0, fWindLong = 0, fWindVert = 0, fWindRot = 0;
+        if (windActive) {
+          const gustMps = gust / 3.6;
+          const q = 0.5 * PHYSICS.rhoAir * PHYSICS.Cd * gustMps * gustMps;
+          const deckWidthM = BRIDGE_DIMENSIONS.deckWidthFt * 0.3048;
+          const lengthM = BRIDGE_DIMENSIONS.suspensionLengthFt * 0.3048;
+          const areaM2 = deckWidthM * lengthM * 0.45; // 45% solid due to truss
+          const modalFactor = 0.50; // sine mode participation
+          const fTotal = q * areaM2 * modalFactor;
+          const dirRad = state.windDirection * degToRad;
+          fWindLat = fTotal * Math.sin(dirRad) * (0.85 + state.gust / 180);
+          fWindLong = fTotal * Math.cos(dirRad) * 0.28;
+          // small vertical lift from deck angle and torsion
+          fWindVert = fTotal * 0.08 * Math.abs(Math.sin(dirRad)) * Math.abs(windRot);
+          fWindRot = fTotal * 0.018 * windRot; // moment
+        }
+        const uLat = sdofStep(PHYSICS.sdof.lateral, dtSafe, agLat, fWindLat);
+        const uVert = sdofStep(PHYSICS.sdof.vertical, dtSafe, agVert, fWindVert);
+        const uLong = sdofStep(PHYSICS.sdof.longitudinal, dtSafe, agLong, fWindLong);
+        const uTors = sdofStep(PHYSICS.sdof.torsion, dtSafe, 0, fWindRot);
+        // u are in meters (modal amplitudes). Convert torsion rad->deg via deck width
+        const visualScale = Number(state.deformationScale);
+        // keep display exaggeration but default realistic is 1x; exhibit clamp remains for safety
+        const lateral = clamp(uLat * visualScale, -7, 7);
+        const vertical = clamp(uVert * visualScale, -5, 5);
+        const longitudinal = clamp(uLong * visualScale, -6, 6);
+        const rotation = clamp((uTors * 3.2 + uLat * 0.35) * visualScale, -7, 7);
+        const tower = clamp(uLat * 1.45 * visualScale, -9, 9);
+        const cable = clamp((uLat * 0.85 + uVert * 0.45) * visualScale, -8, 8);
+        const ground = state.earthquake ? state.pga * eqSignal : 0;
+        currentResponse = { lateral, vertical, longitudinal, rotation, tower, cable, ground, gust, windLateral: windLat };
+        return currentResponse;
+      }
+
+      const visualScale = Number(state.deformationScale);
+      const lateral = clamp((eqLat * .065 + windLat * .12) * visualScale, -7, 7);
+      const vertical = clamp((eqVert * .048 + Math.abs(windRot) * .015) * visualScale, -5, 5);
+      const longitudinal = clamp((eqLong * .055 + windLong * .09) * visualScale, -6, 6);
+      const rotation = clamp((windRot * .85 + eqLat * .16) * visualScale, -7, 7);
+      const tower = clamp((eqLat * .12 + windLat * .21) * visualScale, -9, 9);
+      const cable = clamp((eqLat * .09 + windLat * .16 + eqVert * .04) * visualScale, -8, 8);
+      const ground = state.earthquake ? state.pga * eqSignal : 0;
+      currentResponse = { lateral, vertical, longitudinal, rotation, tower, cable, ground, gust, windLateral: windLat };
+      return currentResponse;
+    }
+
+    function startEarthquake() {
+      updateSyntheticEarthquake();
+      state.earthquake = true;
+      state.eqClock = 0;
+      state.eqResidualClock = 0;
+      state.simTime = 0;
+      const iaStr = currentGroundMotion ? `${currentGroundMotion.ariasIntensity.toFixed(2)} m/s` : '--';
+      const durStr = currentGroundMotion ? `${currentGroundMotion.significantDuration.toFixed(1)} s` : '--';
+      addWarning(`Synthetic earthquake started (PGA=${state.pga.toFixed(2)} g, Ia=${iaStr}, D5-95=${durStr})`);
+      showToast(`Artificial earthquake started at ${state.pga.toFixed(2)} g (Boore/Kanai-Tajimi synthetic accelerogram).`);
+      updateButtons();
+      updateReadouts();
+      updateAudio();
+    }
+
+    function stopEarthquake() {
+      state.earthquake = false;
+      state.eqResidualClock = 0;
+      showToast('Earthquake stopped; the response is decaying.');
+      updateButtons();
+      updateAudio();
+    }
+
+    /* Windstorm simulation */
+    function startWindstorm() {
+      state.windstorm = true;
+      state.windClock = 0;
+      state.simTime = 0;
+      if (state.environment !== 'storm') state.preStormEnvironment = state.environment;
+      state.environment = 'storm';
+      $('environmentSelect').value = 'storm';
+      showToast(`Windstorm started at ${state.windSpeed} km/h.`);
+      updateButtons();
+      applyEnvironment(true);
+      updateAudio();
+    }
+
+    function stopWindstorm() {
+      state.windstorm = false;
+      if (state.environment === 'storm') state.environment = state.preStormEnvironment;
+      $('environmentSelect').value = state.environment;
+      showToast('Windstorm stopped.');
+      updateButtons();
+      applyEnvironment(true);
+      updateAudio();
+    }
+
+    /* Traffic system */
+    const vehicleTypes = [
+      { name: 'compact', label: 'Compact', scale: [2.8, 1.1, 1.45], color: 0x4cb6b1, weight: 1 },
+      { name: 'sedan', label: 'Sedan', scale: [3.4, 1.15, 1.55], color: 0xd6dce1, weight: 2 },
+      { name: 'suv', label: 'SUV', scale: [3.7, 1.6, 1.75], color: 0x3d6074, weight: 2 },
+      { name: 'pickup', label: 'Pickup', scale: [4.1, 1.45, 1.7], color: 0x9b744c, weight: 1 },
+      { name: 'bus', label: 'Transit bus', scale: [7, 3, 2.25], color: 0xd9b557, weight: 1 },
+      { name: 'delivery', label: 'Delivery truck', scale: [5.4, 2.4, 2], color: 0xe7e9db, weight: 1 },
+      { name: 'semi', label: 'Semi-trailer', scale: [10, 3, 2.3], color: 0x9b4742, weight: 1, heavy: true },
+      { name: 'motorcycle', label: 'Motorcycle', scale: [2.2, .8, .65], color: 0x22292e, weight: 1, small: true },
+      { name: 'emergency', label: 'Emergency', scale: [3.8, 1.35, 1.6], color: 0xd74b3e, weight: 1, emergency: true },
+      { name: 'maintenance', label: 'Maintenance', scale: [4.8, 1.8, 1.8], color: 0xeb9751, weight: 1, heavy: true }
+    ];
+
+    function makeVehicle(type) {
+      const definition = vehicleTypes.find((item) => item.name === type) || vehicleTypes[0];
+      const group = new THREE.Group();
+      group.name = `${definition.label} vehicle`;
+      const body = new THREE.Mesh(shared.vehicleBody, new THREE.MeshStandardMaterial({ color: definition.color, roughness: .55, metalness: .1 }));
+      body.scale.set(definition.scale[0], definition.scale[1], definition.scale[2]);
+      body.position.y = definition.scale[1] * .5 + .25;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+      if (!definition.small) {
+        const cabin = new THREE.Mesh(shared.vehicleCabin, materials.vehicleGlass);
+        cabin.scale.set(definition.scale[0] * .55, definition.scale[1] * .5, definition.scale[2] * .82);
+        cabin.position.set(-definition.scale[0] * .12, definition.scale[1] * 1.02, 0);
+        cabin.castShadow = true;
+        cabin.receiveShadow = true;
+        group.add(cabin);
+      } else {
+        const rider = new THREE.Mesh(shared.riderGeometry, materials.vehicleGlass);
+        rider.position.y = 1.25; rider.scale.set(.55, .9, .55);
+        rider.castShadow = true;
+        rider.receiveShadow = true;
+        group.add(rider);
+      }
+      const wheelPositions = definition.small ? [[-.7, 0, 0], [.7, 0, 0]] : [[-definition.scale[0] * .58, .05, -definition.scale[2] * .72], [definition.scale[0] * .58, .05, -definition.scale[2] * .72], [-definition.scale[0] * .58, .05, definition.scale[2] * .72], [definition.scale[0] * .58, .05, definition.scale[2] * .72]];
+      for (const [wx, wy, wz] of wheelPositions) {
+        const wheel = new THREE.Mesh(shared.wheelGeometry, materials.tire);
+        wheel.position.set(wx, wy + .45, wz); wheel.rotation.x = Math.PI / 2; wheel.scale.set(.8, .8, .8);
+        wheel.castShadow = true;
+        group.add(wheel);
+      }
+      const headlightMaterial = new THREE.MeshStandardMaterial({ color: 0xf9e7ae, emissive: 0xf7d478, emissiveIntensity: 1.8 });
+      const brakeMaterial = new THREE.MeshStandardMaterial({ color: 0x490d0b, emissive: 0xf04431, emissiveIntensity: 1.8 });
+      const headlightA = new THREE.Mesh(shared.lightGeometry, headlightMaterial);
+      const headlightB = new THREE.Mesh(shared.lightGeometry, headlightMaterial);
+      const brakeA = new THREE.Mesh(shared.lightGeometry, brakeMaterial);
+      const brakeB = new THREE.Mesh(shared.lightGeometry, brakeMaterial);
+      headlightA.position.set(definition.scale[0] * .52, definition.scale[1] * .65, -definition.scale[2] * .66);
+      headlightB.position.set(definition.scale[0] * .52, definition.scale[1] * .65, definition.scale[2] * .66);
+      brakeA.position.set(-definition.scale[0] * .52, definition.scale[1] * .65, -definition.scale[2] * .66);
+      brakeB.position.set(-definition.scale[0] * .52, definition.scale[1] * .65, definition.scale[2] * .66);
+      group.add(headlightA, headlightB, brakeA, brakeB);
+      let beacon = null;
+      if (definition.emergency) {
+        beacon = new THREE.Mesh(shared.beaconGeometry, materials.emergencyLight);
+        beacon.position.y = definition.scale[1] * 1.7; group.add(beacon);
+      }
+      group.userData = { definition, body, headlightA, headlightB, brakeA, brakeB, beacon };
+      return group;
+    }
+
+    function initialiseVehicleShared() {
+      shared.vehicleBody = new THREE.BoxGeometry(1, 1, 1);
+      shared.vehicleCabin = new THREE.BoxGeometry(1, .7, 1);
+      shared.riderGeometry = new THREE.SphereGeometry(.5, 8, 6);
+      shared.wheelGeometry = new THREE.CylinderGeometry(.42, .42, .22, 10);
+      shared.lightGeometry = new THREE.BoxGeometry(.14, .12, .25);
+      shared.beaconGeometry = new THREE.BoxGeometry(.3, .14, .3);
+    }
+
+    function chooseVehicleType(index) {
+      const required = ['sedan', 'bus', 'semi', 'motorcycle', 'emergency', 'maintenance'];
+      if (index < required.length) return required[index];
+      const random = seeded(index * 71 + 13)();
+      if (random < .18) return 'compact';
+      if (random < .34) return 'suv';
+      if (random < .48) return 'pickup';
+      if (random < .61) return 'delivery';
+      return 'sedan';
+    }
+
+    function regenerateTraffic() {
+      for (const vehicle of vehicles) trafficGroup.remove(vehicle.group);
+      vehicles = [];
+      const count = Math.round(7 + state.trafficDensity * .46);
+      for (let index = 0; index < count; index += 1) {
+        const definitionName = chooseVehicleType(index);
+        const group = makeVehicle(definitionName);
+        const direction = index % 2 === 0 ? 1 : -1;
+        const lanes = direction > 0 ? [-2.7, -.9] : [.9, 2.7];
+        const lane = lanes[index % lanes.length];
+        const vehicle = {
+          id: vehicleSerial++, group, direction, lane, targetLane: lane,
+          x: direction > 0 ? SUSPENSION_START - 10 - (index * 41) % 420 : SUSPENSION_END + 10 + (index * 43) % 420,
+          baseSpeed: state.trafficSpeed * (.78 + (index % 7) * .055),
+          slowing: false, seed: index * 1.79 + 4
+        };
+        group.userData.vehicle = vehicle;
+        group.position.set(vehicle.x, DECK_Y + 1.5, vehicle.lane);
+        trafficGroup.add(group);
+        vehicles.push(vehicle);
+      }
+      updateTrafficLabel();
+    }
+
+    function updateTraffic(dt, time) {
+      const severeWind = state.windstorm && currentResponse.gust >= 120;
+      let heavyCount = 0;
+      for (const vehicle of vehicles) {
+        const definition = vehicle.group.userData.definition;
+        if (definition.heavy) heavyCount += 1;
+        if (!state.trafficPaused) {
+          const speedFactor = severeWind ? clamp(1 - (currentResponse.gust - 100) / 260, .34, 1) : 1;
+          const incidentFactor = state.incident && Math.abs(vehicle.lane - POSITIVE_TRAFFIC_LANES[0]) < .2 ? .34 : 1;
+          const restricted = state.restriction && currentResponse.gust > 160 && (definition.heavy || definition.name === 'motorcycle');
+          const restrictionFactor = restricted ? .08 : 1;
+          const targetSpeed = vehicle.baseSpeed * speedFactor * incidentFactor * restrictionFactor;
+          vehicle.slowing = targetSpeed < vehicle.baseSpeed * .72;
+          vehicle.x += vehicle.direction * targetSpeed * dt * .34;
+          const laneChangeClock = Math.floor((time + vehicle.seed) / 9);
+          if (laneChangeClock % 3 === 0 && Math.abs(vehicle.targetLane - vehicle.lane) < .2 && ((laneChangeClock + Math.floor(vehicle.seed)) % 11 === 0)) {
+            const possible = vehicle.direction > 0 ? POSITIVE_TRAFFIC_LANES : NEGATIVE_TRAFFIC_LANES;
+            vehicle.targetLane = possible[(laneChangeClock + Math.floor(vehicle.seed)) % possible.length];
+          }
+          vehicle.lane = lerp(vehicle.lane, vehicle.targetLane, clamp(dt * .8, 0, 1));
+          if (vehicle.direction > 0 && vehicle.x > TRAFFIC_LIMIT) vehicle.x = -TRAFFIC_LIMIT - (vehicle.seed % 80);
+          if (vehicle.direction < 0 && vehicle.x < -TRAFFIC_LIMIT) vehicle.x = TRAFFIC_LIMIT + (vehicle.seed % 80);
+        }
+        const onSuspensionSpan = vehicle.x >= SUSPENSION_START && vehicle.x <= SUSPENSION_END;
+        const deckResponse = onSuspensionSpan ? currentResponse : { ...currentResponse, lateral: currentResponse.lateral * .25, vertical: currentResponse.vertical * .25, rotation: currentResponse.rotation * .25, longitudinal: 0 };
+        const point = onSuspensionSpan ? getDeckPoint(vehicle.x, vehicle.lane, deckResponse) : approachPoint(vehicle.x, vehicle.lane, deckResponse);
+        vehicle.group.position.copy(point);
+        vehicle.group.position.y += definition.scale[1] * .75;
+        vehicle.group.rotation.y = vehicle.direction > 0 ? 0 : Math.PI;
+        vehicle.group.rotation.z = clamp(currentResponse.rotation * .015, -.08, .08);
+        const lightsOn = state.environment === 'night' || state.environment === 'fog' || state.windstorm || state.stormFog > 38;
+        vehicle.group.userData.headlightA.visible = lightsOn && !state.disableFlashing;
+        vehicle.group.userData.headlightB.visible = lightsOn && !state.disableFlashing;
+        vehicle.group.userData.brakeA.visible = vehicle.slowing;
+        vehicle.group.userData.brakeB.visible = vehicle.slowing;
+        if (vehicle.group.userData.beacon) vehicle.group.userData.beacon.visible = !state.disableFlashing && (Math.sin(time * 9 + vehicle.seed) > 0);
+      }
+      return heavyCount;
+    }
+
+    function approachPoint(x, z, response) {
+      const distance = x < SUSPENSION_START ? SUSPENSION_START - x : x - SUSPENSION_END;
+      const y = DECK_Y - clamp(distance / APPROACH_LENGTH, 0, 1) * (DECK_Y - APPROACH_END_Y);
+      return new THREE.Vector3(x, y, z + response.lateral * .25);
+    }
+
+    function updateTrafficLabel() {
+      const count = vehicles.length;
+      $('statusTraffic').textContent = `${count} vehicles`;
+      $('metricVehicles').textContent = count;
+    }
+
+    /* Weather effects */
+    function buildWeather() {
+      weatherGroup = new THREE.Group();
+      weatherGroup.name = 'Weather and atmosphere';
+      scene.add(weatherGroup);
+      const random = seeded(722);
+      const rainCount = 900;
+      rainPositions = new Float32Array(rainCount * 3);
+      for (let i = 0; i < rainCount; i += 1) {
+        rainPositions[i * 3] = -WEATHER_X_HALF_WIDTH + random() * WEATHER_X_HALF_WIDTH * 2;
+        rainPositions[i * 3 + 1] = 2 + random() * 230;
+        rainPositions[i * 3 + 2] = -300 + random() * 600;
+      }
+      const rainGeometry = new THREE.BufferGeometry();
+      rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+      rainPoints = new THREE.Points(rainGeometry, new THREE.PointsMaterial({ color: 0x8fb8c0, size: .55, transparent: true, opacity: .24, depthWrite: false }));
+      weatherGroup.add(rainPoints);
+
+      const dustCount = 180;
+      dustPositions = new Float32Array(dustCount * 3);
+      for (let i = 0; i < dustCount; i += 1) {
+        dustPositions[i * 3] = -WEATHER_X_HALF_WIDTH + random() * WEATHER_X_HALF_WIDTH * 2;
+        dustPositions[i * 3 + 1] = 3 + random() * 26;
+        dustPositions[i * 3 + 2] = (random() > .5 ? 1 : -1) * (28 + random() * 26);
+      }
+      const dustGeometry = new THREE.BufferGeometry();
+      dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+      dustPoints = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0xc9bea0, size: 1.1, transparent: true, opacity: .0, depthWrite: false }));
+      weatherGroup.add(dustPoints);
+
+      const birdCount = 22;
+      birdPositions = new Float32Array(birdCount * 3);
+      for (let i = 0; i < birdCount; i += 1) {
+        birdPositions[i * 3] = -WEATHER_X_HALF_WIDTH + random() * WEATHER_X_HALF_WIDTH * 2;
+        birdPositions[i * 3 + 1] = 60 + random() * 80;
+        birdPositions[i * 3 + 2] = -120 + random() * 240;
+      }
+      const birdGeometry = new THREE.BufferGeometry();
+      birdGeometry.setAttribute('position', new THREE.BufferAttribute(birdPositions, 3));
+      birdPoints = new THREE.Points(birdGeometry, new THREE.PointsMaterial({ color: 0x223b3c, size: 1.8, sizeAttenuation: true }));
+      weatherGroup.add(birdPoints);
+
+      for (let i = 0; i < 9; i += 1) {
+        const cloud = new THREE.Group();
+        const cloudMaterial = new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
+        for (let j = 0; j < 5; j += 1) {
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), cloudMaterial);
+          puff.position.set(j * 10 - 20, Math.sin(j) * 2, Math.cos(j * 1.4) * 7);
+          puff.scale.set(16 + j * 2, 5 + (j % 2) * 4, 9);
+          cloud.add(puff);
+        }
+        cloud.position.set(-500 + i * 125, 125 + (i % 3) * 16, -160 + (i % 4) * 95);
+        cloudBank.push(cloud);
+        weatherGroup.add(cloud);
+      }
+    }
+
+    function updateWeather(dt, time) {
+      const rainOn = state.rain || state.windstorm;
+      rainPoints.visible = rainOn;
+      const rainStrength = state.windstorm ? clamp(state.windSpeed / 130, .1, 1) : (state.rain ? .35 : 0);
+      rainPoints.material.opacity = state.disableFlashing ? .16 : .24;
+      const rainCount = getQualityConfig().particles;
+      for (let i = 0; i < rainCount * 3; i += 3) {
+        rainPositions[i] += dt * (state.windstorm ? Math.cos(state.windDirection * degToRad) * 16 : 1.5);
+        rainPositions[i + 1] -= dt * (38 + rainStrength * 55);
+        rainPositions[i + 2] += dt * (state.windstorm ? Math.sin(state.windDirection * degToRad) * 16 : 0);
+        if (rainPositions[i + 1] < 1) {
+          rainPositions[i + 1] = 180 + (i % 90);
+          rainPositions[i] = ((rainPositions[i] + WEATHER_X_HALF_WIDTH) % (WEATHER_X_HALF_WIDTH * 2)) - WEATHER_X_HALF_WIDTH;
+          rainPositions[i + 2] = ((rainPositions[i + 2] + 300) % 600) - 300;
+        }
+      }
+      rainPoints.geometry.attributes.position.needsUpdate = true;
+      const dustAmount = state.earthquake ? clamp(state.pga / 1.5, 0, 1) * (state.eqDirection === 'vertical' ? .25 : 1) : 0;
+      dustPoints.material.opacity = dustAmount > .2 ? dustAmount * .38 : 0;
+      dustPoints.visible = dustAmount > .2;
+      for (let i = 0; i < dustPositions.length; i += 3) {
+        dustPositions[i] += dt * (.7 + dustAmount * 5);
+        dustPositions[i + 1] += Math.sin(time + i) * dt * .08;
+        if (dustPositions[i] > 500) dustPositions[i] = -500;
+      }
+      dustPoints.geometry.attributes.position.needsUpdate = true;
+      birdPoints.visible = state.environment === 'morning' || state.environment === 'midday' || state.environment === 'golden';
+      if (!state.reducedMotion) {
+        for (let i = 0; i < birdPositions.length; i += 3) {
+          birdPositions[i] += dt * 2.2;
+          birdPositions[i + 2] += Math.sin(time * 1.8 + i) * dt * .4;
+          if (birdPositions[i] > 20) birdPositions[i] = -350;
+        }
+        birdPoints.geometry.attributes.position.needsUpdate = true;
+      }
+      for (const cloud of cloudBank) {
+        cloud.position.x += dt * (2.5 + (state.windstorm ? state.windSpeed * .045 : 0));
+        if (cloud.position.x > 560) cloud.position.x = -560;
+      }
+    }
+
+    /* Lighting, weather, and atmosphere */
+    const environmentPalettes = {
+      morning: { sky: 0x58a8f0, fog: 0x9eccf5, density: .0005, sun: 0xfffaec, hemi: 1.25, sunIntensity: 2.50, label: 'Sunny Morning', detail: 'warm California sunlight' },
+      midday: { sky: 0x489ee8, fog: 0x90c4ee, density: .0004, sun: 0xffffff, hemi: 1.40, sunIntensity: 2.80, label: 'Clear Midday', detail: 'bright direct sunlight' },
+      golden: { sky: 0x6e95c8, fog: 0xc89e76, density: .0008, sun: 0xffb86b, hemi: 1.05, sunIntensity: 2.10, label: 'Golden Hour', detail: 'warm low sun' },
+      sunset: { sky: 0x546288, fog: 0xb56c5e, density: .0012, sun: 0xff7e4c, hemi: .80, sunIntensity: 1.60, label: 'Sunset', detail: 'evening glow' },
+      night: { sky: 0x08131c, fog: 0x0d1822, density: .0023, sun: 0x6584aa, hemi: .35, sunIntensity: .50, label: 'Night', detail: 'bridge lighting' },
+      fog: { sky: 0xb2c7cf, fog: 0xc2d2d8, density: .0045, sun: 0xe0eaf0, hemi: .85, sunIntensity: 1.00, label: 'Coastal Fog', detail: 'diffuse coastal fog' },
+      storm: { sky: 0x3d535e, fog: 0x4c646f, density: .0035, sun: 0x9bb4be, hemi: .65, sunIntensity: .85, label: 'Windstorm', detail: 'rain and gusts' }
+    };
+    let targetPalette = environmentPalettes.morning;
+    let currentPalette = { ...targetPalette };
+
+    function applyEnvironment(immediate = false) {
+      targetPalette = environmentPalettes[state.environment] || environmentPalettes.morning;
+      if (immediate) currentPalette = { ...targetPalette };
+      updateButtons();
+    }
+
+    function updateLighting(dt) {
+      const blend = state.reducedMotion ? 1 : clamp(dt * 2.6, 0, 1);
+      const targetSky = new THREE.Color(targetPalette.sky);
+      const targetFog = new THREE.Color(targetPalette.fog);
+      scene.background.lerp(targetSky, blend);
+      if (scene.fog && scene.fog.color) scene.fog.color.lerp(targetFog, blend);
+      currentPalette.density = lerp(currentPalette.density, targetPalette.density + (state.windstorm ? state.stormFog / 10000 : 0), blend);
+      if (scene.fog) scene.fog.density = currentPalette.density;
+      currentPalette.sunIntensity = lerp(currentPalette.sunIntensity, targetPalette.sunIntensity, blend);
+      currentPalette.hemi = lerp(currentPalette.hemi, targetPalette.hemi, blend);
+      sunLight.color.lerp(new THREE.Color(targetPalette.sun), blend);
+      sunLight.intensity = currentPalette.sunIntensity;
+      hemiLight.intensity = currentPalette.hemi;
+      fillLight.intensity = currentPalette.hemi * .45;
+      if (ambientLight) ambientLight.intensity = currentPalette.hemi * .25;
+      const night = state.environment === 'night' || state.environment === 'fog' || state.environment === 'storm';
+      materials.bridgeLight.emissiveIntensity = lerp(materials.bridgeLight.emissiveIntensity, night ? 3.2 : 1.0, blend);
+      materials.window.emissiveIntensity = lerp(materials.window.emissiveIntensity, night ? 2.5 : .15, blend);
+      for (const cloud of cloudBank) cloud.visible = state.environment !== 'night' || state.windstorm;
+      if (waterUniforms) {
+        if (waterUniforms.uSunColor) waterUniforms.uSunColor.value.lerp(new THREE.Color(targetPalette.sun), blend);
+        if (waterUniforms.uSkyColor) waterUniforms.uSkyColor.value.lerp(new THREE.Color(targetPalette.sky), blend);
+        if (sunLight && waterUniforms.uSunDir) waterUniforms.uSunDir.value.copy(sunLight.position).normalize();
+      }
+    }
+
+    /* Camera controls */
+    const cameraPresets = {
+      overview: { position: [-560, 170, 470], target: [0, 30, 0] },
+      sf: { position: [-535, 92, 185], target: [-250, 22, 0] },
+      marin: { position: [535, 100, -205], target: [250, 25, 0] },
+      fort: { position: [-300, 65, -105], target: [-245, 20, -16] },
+      southTower: { position: [-285, 92, 105], target: [-210, 35, 0] },
+      northTower: { position: [285, 96, -105], target: [210, 35, 0] },
+      midspan: { position: [-30, 37, 28], target: [0, 25, 0] },
+      cable: { position: [-135, 92, 28], target: [-25, 47, 0] },
+      driver: { position: [-330, 30, 3.5], target: [100, 24, 3.5] },
+      water: { position: [-250, 20, 175], target: [-65, 23, 0] },
+      skyline: { position: [-520, 105, 135], target: [-350, 35, 0] },
+      bird: { position: [-30, 245, 310], target: [0, 30, 0] },
+      eqObservation: { position: [-390, 82, 225], target: [0, 30, 0] },
+      windObservation: { position: [20, 125, 275], target: [0, 40, 0] }
+    };
+
+    function createDriverCar() {
+      if (driverCar) return;
+      const car = makeVehicle('sedan');
+      car.name = 'Driver view car';
+      // make it stand out slightly (optional tint)
+      if (car.userData && car.userData.body) car.userData.body.material = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, roughness: .45, metalness: .22 });
+      driverCar = car;
+      driverCarData = { x: SUSPENSION_START - 15, lane: -0.9, direction: 1, baseSpeed: 68 };
+      const pos = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
+      car.position.copy(pos);
+      car.position.y += 0.75;
+      car.rotation.y = 0;
+      // add to trafficGroup so it shares lighting but stays independent
+      if (trafficGroup) trafficGroup.add(car);
+      else bridgeGroup.add(car);
+    }
+
+    function updateDriverCar(dt, response) {
+      if (!driverCar || !driverCarData) return;
+      const data = driverCarData;
+      data.baseSpeed = state.trafficSpeed;
+      if (!state.trafficPaused) {
+        const speedFactor = (state.windstorm && currentResponse.gust >= 120) ? clamp(1 - (currentResponse.gust - 100) / 260, .34, 1) : 1;
+        data.x += data.direction * data.baseSpeed * dt * .34 * speedFactor;
+        if (data.direction > 0 && data.x > TRAFFIC_LIMIT) data.x = -TRAFFIC_LIMIT - 20;
+        if (data.direction < 0 && data.x < -TRAFFIC_LIMIT) data.x = TRAFFIC_LIMIT + 20;
+      }
+      const onSusp = data.x >= SUSPENSION_START && data.x <= SUSPENSION_END;
+      const pt = onSusp ? getDeckPoint(data.x, data.lane, response) : approachPoint(data.x, data.lane, response);
+      driverCar.position.copy(pt);
+      driverCar.position.y += 0.82;
+      driverCar.rotation.y = data.direction > 0 ? 0 : Math.PI;
+      driverCar.rotation.z = clamp(response.rotation * 0.015, -0.08, 0.08);
+    }
+
+    function updateDriverCamera() {
+      if (!isDriverView || !driverCar || !driverCarData) return;
+      const lane = driverCarData.lane;
+      const x = driverCarData.x;
+      const dir = driverCarData.direction;
+      // eye a little above roof, slightly towards center
+      const eyeOffsetY = 1.45;
+      const eye = getDeckPoint(x, lane, currentResponse);
+      eye.y += eyeOffsetY;
+      // add deck lateral/torsion already in eye via getDeckPoint
+      const aheadX = x + dir * 22;
+      const ahead = getDeckPoint(aheadX, lane, currentResponse);
+      ahead.y += eyeOffsetY;
+      // smooth follow: lerp camera towards eye
+      camera.position.lerp(eye, 0.18);
+      controls.target.lerp(ahead, 0.18);
+      controls.update();
+    }
+
+    function setCameraPreset(name, immediate = false) {
+      if (name === 'driver') {
+        isDriverView = true;
+        if (!driverCar) createDriverCar();
+        // place camera immediately near car then let follow take over
+        const eye = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
+        eye.y += 1.45;
+        const ahead = getDeckPoint(driverCarData.x + driverCarData.direction * 22, driverCarData.lane, currentResponse);
+        ahead.y += 1.45;
+        cameraTween = null;
+        if (immediate || state.reducedMotion) {
+          camera.position.copy(eye);
+          controls.target.copy(ahead);
+          controls.update();
+        } else {
+          cameraTween = { start: performance.now(), duration: 900, fromPosition: camera.position.clone(), toPosition: eye, fromTarget: controls.target.clone(), toTarget: ahead };
+          // tween will hand off to follow; keep isDriverView true
+          const prevTween = cameraTween;
+          // after tween, follow continues via updateDriverCamera
+        }
+        return;
+      }
+      isDriverView = false;
+      const preset = cameraPresets[name] || cameraPresets.overview;
+      const position = new THREE.Vector3(...preset.position);
+      const target = new THREE.Vector3(...preset.target);
+      if (immediate || state.reducedMotion) {
+        camera.position.copy(position);
+        controls.target.copy(target);
+        controls.update();
+        cameraTween = null;
+      } else {
+        cameraTween = { start: performance.now(), duration: 1200, fromPosition: camera.position.clone(), toPosition: position, fromTarget: controls.target.clone(), toTarget: target };
+      }
+    }
+
+    function updateCameraTween(now) {
+      if (!cameraTween) return;
+      const progress = clamp((now - cameraTween.start) / cameraTween.duration, 0, 1);
+      const eased = progress < .5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      camera.position.lerpVectors(cameraTween.fromPosition, cameraTween.toPosition, eased);
+      controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, eased);
+      if (progress >= 1) cameraTween = null;
+    }
+
+    function updateCameraShake(time) {
+      if (state.reducedMotion || state.disableFlashing) return;
+      const active = (state.earthquake && state.eqCameraShake) || (state.windstorm && state.windCameraShake);
+      if (!active) return;
+      const intensity = state.cameraShakeIntensity / 100;
+      const amplitude = intensity * clamp(Math.abs(currentResponse.ground) * 9 + Math.abs(currentResponse.gust - state.windSpeed) * .012 + Math.abs(currentResponse.lateral) * .06, 0, 2.2);
+      camera.position.x += Math.sin(time * 28) * amplitude * .07;
+      camera.position.y += Math.cos(time * 31) * amplitude * .04;
+      camera.position.z += Math.sin(time * 24 + 1) * amplitude * .06;
+    }
+
+    /* Audio system */
+    function ensureAudio() {
+      if (audio) {
+        if (audio.context.state === 'suspended') audio.context.resume();
+        return audio;
+      }
+      try {
+        const context = new AudioContext();
+        const master = context.createGain(); master.connect(context.destination);
+        const buses = {};
+        for (const name of ['wind', 'traffic', 'hazard', 'ambient']) { buses[name] = context.createGain(); buses[name].connect(master); }
+        const windOsc = context.createOscillator(); windOsc.type = 'sawtooth'; windOsc.frequency.value = 42; const windGain = context.createGain(); windGain.gain.value = 0; windOsc.connect(windGain).connect(buses.wind); windOsc.start();
+        const rumbleOsc = context.createOscillator(); rumbleOsc.type = 'sine'; rumbleOsc.frequency.value = 31; const rumbleGain = context.createGain(); rumbleGain.gain.value = 0; rumbleOsc.connect(rumbleGain).connect(buses.hazard); rumbleOsc.start();
+        const ambientOsc = context.createOscillator(); ambientOsc.type = 'triangle'; ambientOsc.frequency.value = 174; const ambientGain = context.createGain(); ambientGain.gain.value = 0; ambientOsc.connect(ambientGain).connect(buses.ambient); ambientOsc.start();
+        audio = { context, master, buses, windGain, rumbleGain, ambientGain, muted: false };
+        updateAudio();
+        $('muteButton').textContent = 'Mute Audio';
+        showToast('Synthesized exhibit audio enabled.');
+      } catch (error) {
+        addWarning('Web Audio unavailable');
+        showToast('Audio is unavailable in this browser.', true);
+      }
+      return audio;
+    }
+
+    function updateAudio() {
+      if (!audio) return;
+      const now = audio.context.currentTime;
+      const windLevel = clamp((state.windstorm ? state.windSpeed / 200 : .12) * state.windVolume / 100, 0, .35);
+      const hazardLevel = clamp((state.earthquake ? state.pga / 1.5 : 0) * state.hazardVolume / 100, 0, .28);
+      const ambientLevel = state.ambientVolume / 100 * .08;
+      audio.master.gain.setTargetAtTime(audio.muted ? 0 : state.masterVolume / 100, now, .04);
+      audio.buses.wind.gain.setTargetAtTime(windLevel, now, .12);
+      audio.buses.traffic.gain.setTargetAtTime(state.trafficPaused ? 0 : state.trafficVolume / 100 * .06, now, .12);
+      audio.buses.hazard.gain.setTargetAtTime(hazardLevel, now, .12);
+      audio.buses.ambient.gain.setTargetAtTime(ambientLevel, now, .12);
+      audio.windGain.gain.setTargetAtTime(windLevel, now, .12);
+      audio.rumbleGain.gain.setTargetAtTime(hazardLevel, now, .12);
+      audio.ambientGain.gain.setTargetAtTime(ambientLevel, now, .12);
+      audio.windGain.gain.setTargetAtTime(windLevel, now, .12);
+    }
+
+    /* User interface */
+    function updateButtons() {
+      $('earthquakeButton').textContent = state.earthquake ? 'Stop Earthquake' : 'Start Earthquake';
+      $('windstormButton').textContent = state.windstorm ? 'Stop Windstorm' : 'Start Windstorm';
+      $('earthquakeButton').classList.toggle('active', state.earthquake);
+      $('windstormButton').classList.toggle('active', state.windstorm);
+      $('trafficPauseButton').textContent = state.trafficPaused ? 'Resume Traffic' : 'Pause Traffic';
+      $('incidentButton').textContent = `Incident: ${state.incident ? 'On' : 'Off'}`;
+      $('incidentButton').classList.toggle('active', state.incident);
+      $('autorotateButton').textContent = `Auto-rotate: ${state.autorotate ? 'On' : 'Off'}`;
+      $('autorotateButton').classList.toggle('active', state.autorotate);
+      $('statusEarthquake').textContent = state.earthquake ? 'Active' : (state.eqResidualClock < 12 ? 'Decay' : 'Standby');
+      $('statusWind').textContent = `${Math.round(state.windSpeed)} km/h`;
+      $('statusEnvironment').textContent = (environmentPalettes[state.environment] || environmentPalettes.morning).label;
+      $('statusWind').parentElement.classList.toggle('active', state.windstorm);
+      $('earthquakeStatus').classList.toggle('active', state.earthquake);
+    }
+
+    function updateReadouts() {
+      if (!currentGroundMotion) updateSyntheticEarthquake();
+      if (currentGroundMotion) {
+        if ($('eqArias')) $('eqArias').textContent = `${currentGroundMotion.ariasIntensity.toFixed(2)} m/s`;
+        if ($('eqSigDur')) $('eqSigDur').textContent = `${currentGroundMotion.significantDuration.toFixed(1)} s`;
+        if ($('eqSoilFreq')) $('eqSoilFreq').textContent = `${currentGroundMotion.fg.toFixed(2)} Hz`;
+      }
+      $('pgaValue').textContent = `${state.pga.toFixed(2)} g`;
+      $('pgaRange').value = state.pga;
+      $('pgaNumber').value = state.pga.toFixed(2);
+      $('windValue').textContent = `${Math.round(state.windSpeed)} km/h / ${Math.round(state.windSpeed * .621371)} mph`;
+      $('windDirectionValue').textContent = `${pad(Math.round(state.windDirection), 3)} deg`;
+      $('gustValue').textContent = `${Math.round(state.gust)}%`;
+      $('turbulenceValue').textContent = `${Math.round(state.turbulence)}%`;
+      $('fogValue').textContent = `${Math.round(state.stormFog)}%`;
+      $('densityValue').textContent = `${Math.round(state.trafficDensity)}%`;
+      $('trafficSpeedValue').textContent = `${Math.round(state.trafficSpeed)} km/h`;
+      $('scaleValue').textContent = `${state.deformationScale}x`;
+      $('cameraShakeValue').textContent = `${Math.round(state.cameraShakeIntensity)}%`;
+      $('hudPga').textContent = `${state.pga.toFixed(2)} g`;
+      $('hudWind').textContent = `${Math.round(state.windSpeed)} km/h`;
+      $('hudScale').textContent = `${state.deformationScale}x`;
+      $('metricPga').textContent = `${state.pga.toFixed(2)} g`;
+      $('metricGround').textContent = `${fmt(currentResponse.ground, 2)} g`;
+      $('metricWind').textContent = `${Math.round(state.windSpeed)} / ${Math.round(currentResponse.gust)} `;
+      $('metricLateral').textContent = `${fmt(currentResponse.lateral, 2)} m`;
+      $('metricVertical').textContent = `${fmt(currentResponse.vertical, 2)} m`;
+      $('metricRotation').textContent = `${fmt(currentResponse.rotation, 2)} deg`;
+      $('metricTower').textContent = `${fmt(currentResponse.tower, 2)} m`;
+      $('metricCable').textContent = `${fmt(currentResponse.cable, 2)} m`;
+      $('metricTraffic').textContent = `${Math.round(state.trafficSpeed)} km/h`;
+      $('metricScale').textContent = `${state.deformationScale}x`;
+      $('metricElapsed').textContent = `${pad(Math.floor(state.simTime / 60))}:${pad(Math.floor(state.simTime % 60))}.${Math.floor((state.simTime % 1) * 10)}`;
+      $('metricWeather').textContent = (environmentPalettes[state.environment] || environmentPalettes.morning).label.replace('Clear ', '').replace('Sunny ', '').replace('Bright ', '');
+      $('metricWeatherDetail').textContent = (environmentPalettes[state.environment] || environmentPalettes.morning).detail;
+      const severe = state.windstorm && currentResponse.gust > 160;
+      $('metricRestriction').textContent = severe && state.restriction ? 'restrictions active' : (state.incident ? 'incident slowdown' : 'normal flow');
+      $('metricHeavy').textContent = `${vehicles.filter((vehicle) => vehicle.group.userData.definition.heavy).length} heavy`;
+      $('eqChartState').textContent = state.earthquake ? `${state.eqClock.toFixed(1)} s` : (state.eqResidualClock < 12 ? 'decay' : 'standby');
+      $('windChartState').textContent = state.windstorm ? `${state.windClock.toFixed(1)} s` : 'standby';
+    }
+
+    function updateChart(canvas, history, mode) {
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      const width = canvas.width;
+      const height = canvas.height;
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = 'rgba(5, 14, 18, .9)'; context.fillRect(0, 0, width, height);
+      context.strokeStyle = 'rgba(194, 218, 211, .10)'; context.lineWidth = 1;
+      for (let y = 1; y < 4; y += 1) { context.beginPath(); context.moveTo(0, y * height / 4); context.lineTo(width, y * height / 4); context.stroke(); }
+      if (history.length < 2) return;
+      const series = mode === 'eq' ? [
+        { index: 1, color: '#f5cc68', scale: 1.5 }, { index: 2, color: '#62d7c7', scale: 5 }, { index: 3, color: '#ff806e', scale: 5 }
+      ] : [
+        { index: 1, color: '#f5cc68', scale: 200 }, { index: 2, color: '#ffb866', scale: 200 }, { index: 3, color: '#62d7c7', scale: 5 }, { index: 4, color: '#ff806e', scale: 7 }
+      ];
+      for (const item of series) {
+        context.strokeStyle = item.color; context.lineWidth = 2; context.beginPath();
+        history.forEach((sample, index) => {
+          const x = index / Math.max(1, history.length - 1) * width;
+          const value = clamp(sample[item.index] / item.scale, -1, 1);
+          const y = height / 2 - value * height * .42;
+          if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+        });
+        context.stroke();
+      }
+    }
+
+    function recordHistories() {
+      eqHistory.push([state.simTime, currentResponse.ground, currentResponse.lateral, currentResponse.vertical]);
+      windHistory.push([state.simTime, state.windSpeed, currentResponse.gust, currentResponse.lateral, currentResponse.rotation]);
+      if (eqHistory.length > 150) eqHistory.shift();
+      if (windHistory.length > 150) windHistory.shift();
+    }
+
+    function resetSimulation() {
+      Object.assign(state, defaults);
+      state.simTime = 0; state.eqClock = 0; state.eqResidualClock = 99; state.windClock = 0; state.tourIndex = 0;
+      $('environmentSelect').value = state.environment;
+      $('pgaRange').value = state.pga; $('pgaNumber').value = state.pga;
+      $('eqDuration').value = state.eqDuration; $('damping').value = state.damping; $('eqFrequency').value = state.eqFrequency; $('eqDirection').value = state.eqDirection; $('seedInput').value = state.seed;
+      $('windRange').value = state.windSpeed; $('windDirection').value = state.windDirection; $('gustRange').value = state.gust; $('turbulenceRange').value = state.turbulence; $('windDuration').value = state.windDuration; $('stormFog').value = state.stormFog;
+      $('rainToggle').checked = state.rain; $('eqCameraShake').checked = state.eqCameraShake; $('windCameraShake').checked = state.windCameraShake; $('restrictionToggle').checked = state.restriction;
+      $('densityRange').value = state.trafficDensity; $('trafficSpeed').value = state.trafficSpeed; $('deformationScale').value = state.deformationScale; $('realisticToggle').checked = state.realisticPhysics; $('overlayToggle').checked = state.overlay; $('vectorsToggle').checked = state.vectors;
+      $('lightningToggle').checked = state.lightning; $('reducedMotionToggle').checked = state.reducedMotion; $('disableFlashing').checked = state.disableFlashing; $('cameraShakeRange').value = state.cameraShakeIntensity; $('qualitySelect').value = state.quality;
+      $('masterVolume').value = state.masterVolume; $('windVolume').value = state.windVolume; $('trafficVolume').value = state.trafficVolume; $('hazardVolume').value = state.hazardVolume; $('ambientVolume').value = state.ambientVolume;
+      eqHistory = []; windHistory = []; currentResponse = { lateral: 0, vertical: 0, longitudinal: 0, rotation: 0, tower: 0, cable: 0, ground: 0, gust: state.windSpeed, windLateral: 0 };
+      updateSyntheticEarthquake();
+      resetPhysics(); initPhysics();
+      for (const vehicle of vehicles) trafficGroup.remove(vehicle.group);
+      regenerateTraffic();
+      $('presetSelect').value = 'overview';
+      setCameraPreset('overview', true);
+      applyEnvironment(true);
+      updateReadouts(); updateButtons(); updateQuality(); updateAudio();
+      showToast('Scene and simulation state reset.');
+    }
+
+    /* Performance management */
+    const qualityConfigs = {
+      low: { pixelRatio: 1, shadows: false, particles: 250, city: .55, cable: .55 },
+      medium: { pixelRatio: 1.35, shadows: true, particles: 500, city: .75, cable: .75 },
+      high: { pixelRatio: 1.8, shadows: true, particles: 750, city: 1, cable: 1 },
+      ultra: { pixelRatio: 2.2, shadows: true, particles: 900, city: 1, cable: 1 }
+    };
+    function getQualityConfig() { return qualityConfigs[state.quality] || qualityConfigs.high; }
+    function updateQuality() {
+      const config = getQualityConfig();
+      if (renderer) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, config.pixelRatio));
+        renderer.shadowMap.enabled = config.shadows;
+      }
+      if (rainPoints) rainPoints.geometry.setDrawRange(0, config.particles);
+      if (dustPoints) dustPoints.geometry.setDrawRange(0, Math.round(180 * config.city));
+    }
+
+    function updateDiagnostics() {
+      const output = $('diagnosticsOutput');
+      if (!$('diagnosticsToggle').checked) { output.hidden = true; return; }
+      output.hidden = false;
+      const info = renderer ? renderer.info : null;
+      output.textContent = [
+        `renderer: ${renderer ? renderer.capabilities.maxTextures + ' textures / WebGL ' + renderer.capabilities.isWebGL2 : 'unavailable'}`,
+        `objects: ${scene ? scene.children.length + ' root groups' : '--'}`,
+        `triangles: ${info ? info.render.triangles.toLocaleString() : '--'}`,
+        `draw calls: ${info ? info.render.calls : '--'}`,
+        `active vehicles: ${vehicles.length}`,
+        `active particles: ${rainPoints && rainPoints.visible ? rainPoints.geometry.drawRange.count : 0}`,
+        `average frame rate: ${fps.toFixed(1)} fps`,
+        `warnings: ${warningLog.length ? warningLog.join(' | ') : 'none'}`
+      ].join('\n');
+    }
+
+    function onResize() {
+      if (!renderer || !camera) return;
+      const bounds = $('viewport').getBoundingClientRect();
+      const width = Math.max(1, bounds.width);
+      const height = Math.max(1, bounds.height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+
+    function updateScene(dt, now) {
+      const time = state.simTime;
+      if (state.visibility) {
+        if (!state.reducedMotion) state.simTime += dt;
+        const response = calculateResponse(time, dt);
+        updateDeckGeometry(response);
+        updateStructuralOverlay(response);
+        updateTowers(response);
+        updateCables(response, time);
+        updateTraffic(dt, time);
+        updateDriverCar(dt, response);
+        updateWeather(dt, time);
+        updateBoats(dt, time);
+        if (waterUniforms) { waterUniforms.uTime.value = time; waterUniforms.uWind.value = clamp(response.gust / 200, 0, 1); }
+        updateLighting(dt);
+        updateCameraTween(now);
+        if (isDriverView) {
+          if (!cameraTween) updateDriverCamera();
+          else controls.update();
+        } else {
+          if (state.autorotate && !cameraTween && !state.reducedMotion) controls.autoRotate = true; else controls.autoRotate = false;
+          controls.update();
+        }
+        updateCameraShake(time);
+        updateAudio();
+        recordHistories();
+        if (Math.floor(state.simTime * 10) % 3 === 0) {
+          updateReadouts();
+          updateChart($('eqChart'), eqHistory, 'eq');
+          updateChart($('windChart'), windHistory, 'wind');
+        }
+        updateLightning(dt);
+      }
+      fpsAccumulator += 1 / Math.max(dt, .001);
+      fpsFrames += 1;
+      if (fpsFrames >= 30) { fps = fpsAccumulator / fpsFrames; fpsAccumulator = 0; fpsFrames = 0; $('statusFps').textContent = fps.toFixed(0); }
+      if (Math.floor(now / 1000) % 3 === 0) updateDiagnostics();
+      renderer.render(scene, camera);
+    }
+
+    function updateCables(response, time) {
+      const rx = clamp(response.tower * .009, -.075, .075);
+      const rz = clamp(response.longitudinal * .004, -.045, .045);
+      const cosRx = Math.cos(rx), sinRx = Math.sin(rx);
+      const cosRz = Math.cos(rz), sinRz = Math.sin(rz);
+      function getTowerSaddle(towerX, side) {
+        const lx = 0, ly = TOWER_TOP_Y, lz = side * CABLE_Z;
+        const ly1 = ly * cosRx - lz * sinRx;
+        const lz1 = ly * sinRx + lz * cosRx;
+        const lx2 = -ly1 * sinRz;
+        const ly2 = ly1 * cosRz;
+        return new THREE.Vector3(towerX + lx2, ly2, lz1);
+      }
+      for (const [cableIndex, line] of cableLines.entries()) {
+        const position = line.geometry.attributes.position.array;
+        const side = line.userData.side;
+        const points = [];
+        for (let index = 0; index < CABLE_POINT_COUNT; index += 1) {
+          let x = SUSPENSION_START + index * CABLE_STEP;
+          const shape = deckShape(x);
+          const baseSway = response.cable * (.35 + shape * .65);
+          const swayOsc = Math.sin(time * 2.1 + x * .05 + side) * Math.abs(response.cable) * .08;
+          let y = cableHeight(x) + baseSway + swayOsc;
+          let z = side * CABLE_Z + response.lateral * shape * .42;
+          // Pin to tower saddle so cable never lifts off the saddle
+          const distSouth = Math.abs(x + TOWER_X);
+          const distNorth = Math.abs(x - TOWER_X);
+          const towerDist = Math.min(distSouth, distNorth);
+          const anchDist = Math.min(Math.abs(x - SUSPENSION_START), Math.abs(x - SUSPENSION_END));
+          if (towerDist < 12.5) {
+            const towerX = distSouth < distNorth ? -TOWER_X : TOWER_X;
+            const saddle = getTowerSaddle(towerX, side);
+            if (towerDist < 2.6) {
+              y = saddle.y; z = saddle.z; x = saddle.x;
+            } else {
+              const t = clamp((towerDist - 2.6) / (12.5 - 2.6), 0, 1);
+              y = lerp(saddle.y, y, t);
+              z = lerp(saddle.z, z, t);
+              x = lerp(saddle.x, x, t);
+            }
+          } else if (anchDist < 7.5) {
+            const t = clamp(anchDist / 7.5, 0, 1);
+            const anchY = ANCHORAGE_CABLE_Y;
+            const anchZ = side * CABLE_Z;
+            const anchX = anchDist === Math.abs(x - SUSPENSION_START) ? SUSPENSION_START : SUSPENSION_END;
+            y = lerp(anchY, y, t);
+            z = lerp(anchZ, z, t);
+            x = lerp(anchX, x, t);
+          }
+          position[index * 3] = x;
+          position[index * 3 + 1] = y;
+          position[index * 3 + 2] = z;
+          points.push(new THREE.Vector3(x, y, z));
+        }
+        line.geometry.attributes.position.needsUpdate = true;
+        const tube = cableTubes[cableIndex];
+        if (tube) {
+          const geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, false, 'centripetal'), CABLE_POINT_COUNT - 1, CABLE_RADIUS, 6, false);
+          tube.geometry.dispose();
+          tube.geometry = geometry;
+        }
+      }
+      for (const suspender of suspenders) {
+        const { x: sx, side } = suspender.userData;
+        const position = suspender.geometry.attributes.position.array;
+        const shape = deckShape(sx);
+        const baseSway = response.cable * (.35 + shape * .65);
+        let cableY = cableHeight(sx) + baseSway;
+        let cableZ = side * CABLE_Z + response.lateral * shape * .42;
+        let cableX = sx;
+        const distSouth = Math.abs(sx + TOWER_X);
+        const distNorth = Math.abs(sx - TOWER_X);
+        const towerDist = Math.min(distSouth, distNorth);
+        const anchDist = Math.min(Math.abs(sx - SUSPENSION_START), Math.abs(sx - SUSPENSION_END));
+        if (towerDist < 12.5) {
+          const towerX = distSouth < distNorth ? -TOWER_X : TOWER_X;
+          const saddle = getTowerSaddle(towerX, side);
+          if (towerDist < 2.6) {
+            cableY = saddle.y; cableZ = saddle.z; cableX = saddle.x;
+          } else {
+            const t = clamp((towerDist - 2.6) / (12.5 - 2.6), 0, 1);
+            cableY = lerp(saddle.y, cableY, t);
+            cableZ = lerp(saddle.z, cableZ, t);
+            cableX = lerp(saddle.x, cableX, t);
+          }
+        } else if (anchDist < 7.5) {
+          const t = clamp(anchDist / 7.5, 0, 1);
+          const anchY = ANCHORAGE_CABLE_Y;
+          const anchZ = side * CABLE_Z;
+          const anchX = Math.abs(sx - SUSPENSION_START) < Math.abs(sx - SUSPENSION_END) ? SUSPENSION_START : SUSPENSION_END;
+          cableY = lerp(anchY, cableY, t);
+          cableZ = lerp(anchZ, cableZ, t);
+          cableX = lerp(anchX, cableX, t);
+        }
+        const deck = getDeckPoint(sx, side * DECK_CABLE_ATTACH_Z, response);
+        position[0] = deck.x; position[1] = deck.y; position[2] = deck.z;
+        position[3] = cableX; position[4] = cableY; position[5] = cableZ;
+        suspender.geometry.attributes.position.needsUpdate = true;
+      }
+    }
+
+    function updateTowers(response) {
+      for (const item of towerReferences) {
+        if (item.tower) {
+          item.tower.rotation.x = clamp(response.tower * .009, -.075, .075);
+          item.tower.rotation.z = clamp(response.longitudinal * .004, -.045, .045);
+        }
+        if (item.reference) item.reference.position.z = response.tower * .45;
+      }
+    }
+
+    function updateBoats(dt, time) {
+      for (const boat of boats) {
+        const path = boat.userData;
+        if (!state.reducedMotion) boat.position.x += path.speed * dt * (state.windstorm ? 1 + state.windSpeed / 500 : 1);
+        boat.position.y = path.y + Math.sin(time * .8 + path.offset) * .25;
+        boat.position.z = path.baseZ + Math.sin(time * .16 + path.offset) * 6;
+        if (boat.position.x > 540) boat.position.x = -540;
+        if (boat.position.x < -540) boat.position.x = 540;
+      }
+    }
+
+    function updateLightning(dt) {
+      const severe = state.windstorm && state.windSpeed > 120 && state.lightning && !state.disableFlashing;
+      if (!severe) { lightningFlash = lerp(lightningFlash, 0, dt * 8); return; }
+      lightningTimer -= dt;
+      if (lightningTimer <= 0) {
+        lightningTimer = 6 + Math.abs(Math.sin(state.windClock * 3.1)) * 7;
+        lightningFlash = 1;
+      }
+      lightningFlash = lerp(lightningFlash, 0, dt * 10);
+      sunLight.intensity = targetPalette.sunIntensity + lightningFlash * 3;
+    }
+
+    function bindEvents() {
+      $('earthquakeButton').addEventListener('click', () => { ensureAudio(); state.earthquake ? stopEarthquake() : startEarthquake(); });
+      $('windstormButton').addEventListener('click', () => { ensureAudio(); state.windstorm ? stopWindstorm() : startWindstorm(); });
+      $('masterStopButton').addEventListener('click', () => { state.earthquake = false; state.windstorm = false; state.eqResidualClock = 99; state.environment = 'morning'; $('environmentSelect').value = 'morning'; applyEnvironment(true); updateButtons(); updateAudio(); showToast('All hazards stopped.'); });
+      $('resetButton').addEventListener('click', () => { ensureAudio(); resetSimulation(); });
+      $('tourButton').addEventListener('click', () => { ensureAudio(); const names = ['overview', 'sf', 'southTower', 'midspan', 'northTower', 'marin', 'water', 'bird']; const name = names[state.tourIndex % names.length]; state.tourIndex += 1; $('presetSelect').value = name; setCameraPreset(name); showToast(`Cinematic view: ${$('presetSelect').selectedOptions[0].text}.`); });
+      $('fullscreenButton').addEventListener('click', async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (error) { showToast('Fullscreen is unavailable here.', true); } });
+      $('pgaRange').addEventListener('input', (event) => { state.pga = clamp(Number(event.target.value), 0, 1.5); $('pgaNumber').value = state.pga.toFixed(2); updateSyntheticEarthquake(); updateReadouts(); });
+      $('pgaNumber').addEventListener('input', (event) => { state.pga = clamp(Number(event.target.value) || 0, 0, 1.5); $('pgaRange').value = state.pga; updateSyntheticEarthquake(); updateReadouts(); });
+      $('eqDuration').addEventListener('change', (event) => { state.eqDuration = clamp(Number(event.target.value) || 18, 5, 90); event.target.value = state.eqDuration; updateSyntheticEarthquake(); updateReadouts(); });
+      $('damping').addEventListener('change', (event) => { state.damping = clamp(Number(event.target.value) || .18, .05, .8); event.target.value = state.damping; initPhysics(); });
+      $('eqFrequency').addEventListener('change', (event) => { state.eqFrequency = event.target.value; updateSyntheticEarthquake(); updateReadouts(); });
+      $('eqDirection').addEventListener('change', (event) => { state.eqDirection = event.target.value; });
+      $('seedInput').addEventListener('change', (event) => { state.seed = clamp(Math.round(Number(event.target.value) || 17), 1, 9999); event.target.value = state.seed; updateSyntheticEarthquake(); updateReadouts(); });
+      $('windRange').addEventListener('input', (event) => { state.windSpeed = Number(event.target.value); updateReadouts(); updateButtons(); });
+      $('windDirection').addEventListener('input', (event) => { state.windDirection = Number(event.target.value); updateReadouts(); });
+      $('gustRange').addEventListener('input', (event) => { state.gust = Number(event.target.value); updateReadouts(); });
+      $('turbulenceRange').addEventListener('input', (event) => { state.turbulence = Number(event.target.value); updateReadouts(); });
+      $('windDuration').addEventListener('change', (event) => { state.windDuration = clamp(Number(event.target.value) || 30, 5, 120); event.target.value = state.windDuration; });
+      $('stormFog').addEventListener('input', (event) => { state.stormFog = Number(event.target.value); updateReadouts(); });
+      $('rainToggle').addEventListener('change', (event) => { state.rain = event.target.checked; });
+      $('eqCameraShake').addEventListener('change', (event) => { state.eqCameraShake = event.target.checked; });
+      $('windCameraShake').addEventListener('change', (event) => { state.windCameraShake = event.target.checked; });
+      $('restrictionToggle').addEventListener('change', (event) => { state.restriction = event.target.checked; });
+      $('trafficPauseButton').addEventListener('click', () => { state.trafficPaused = !state.trafficPaused; updateButtons(); updateAudio(); });
+      $('trafficClearButton').addEventListener('click', () => { for (const vehicle of vehicles) trafficGroup.remove(vehicle.group); vehicles = []; updateTrafficLabel(); showToast('Traffic cleared.'); });
+      $('trafficRegenerateButton').addEventListener('click', () => { regenerateTraffic(); showToast('Traffic regenerated with the selected density.'); });
+      $('densityRange').addEventListener('input', (event) => { state.trafficDensity = Number(event.target.value); updateReadouts(); });
+      $('densityRange').addEventListener('change', () => regenerateTraffic());
+      $('trafficSpeed').addEventListener('input', (event) => { state.trafficSpeed = Number(event.target.value); for (const vehicle of vehicles) vehicle.baseSpeed = state.trafficSpeed * .8; updateReadouts(); });
+      $('incidentButton').addEventListener('click', () => { state.incident = !state.incident; updateButtons(); });
+      $('environmentSelect').addEventListener('change', (event) => { state.environment = event.target.value; applyEnvironment(); });
+      $('lightningToggle').addEventListener('change', (event) => { if (event.target.checked && !state.disableFlashing && !window.confirm('Frequent lightning flashes may be uncomfortable for some viewers. Enable them?')) { event.target.checked = false; return; } state.lightning = event.target.checked; });
+      $('reducedMotionToggle').addEventListener('change', (event) => { state.reducedMotion = event.target.checked; });
+      $('disableFlashing').addEventListener('change', (event) => { state.disableFlashing = event.target.checked; if (state.disableFlashing) { state.lightning = false; $('lightningToggle').checked = false; } });
+      $('deformationScale').addEventListener('change', (event) => { state.deformationScale = Number(event.target.value); updateReadouts(); });
+      $('realisticToggle').addEventListener('change', (event) => { state.realisticPhysics = event.target.checked; PHYSICS.enabled = state.realisticPhysics; if (PHYSICS.enabled) initPhysics(); else resetPhysics(); showToast(state.realisticPhysics ? 'Realistic FEM enabled (Newmark SDOF + 25ft truss stiffness)' : 'Legacy scaled deformation restored.'); });
+      $('overlayToggle').addEventListener('change', (event) => { state.overlay = event.target.checked; });
+      $('vectorsToggle').addEventListener('change', (event) => { state.vectors = event.target.checked; });
+      $('presetSelect').addEventListener('change', (event) => setCameraPreset(event.target.value));
+      $('cameraResetButton').addEventListener('click', () => { $('presetSelect').value = 'overview'; setCameraPreset('overview'); });
+      $('autorotateButton').addEventListener('click', () => { state.autorotate = !state.autorotate; updateButtons(); });
+      $('cameraShakeRange').addEventListener('input', (event) => { state.cameraShakeIntensity = Number(event.target.value); updateReadouts(); });
+      $('muteButton').addEventListener('click', () => { ensureAudio(); if (audio) { audio.muted = !audio.muted; $('muteButton').textContent = audio.muted ? 'Unmute Audio' : 'Mute Audio'; updateAudio(); } });
+      for (const id of ['masterVolume', 'windVolume', 'trafficVolume', 'hazardVolume', 'ambientVolume']) $(id).addEventListener('input', (event) => { state[id] = Number(event.target.value); if (id === 'masterVolume') $('masterVolumeValue').textContent = `${state.masterVolume}%`; updateAudio(); });
+      $('qualitySelect').addEventListener('change', (event) => { state.quality = event.target.value; updateQuality(); });
+      $('diagnosticsToggle').addEventListener('change', updateDiagnostics);
+      $('viewportOverlayButton').addEventListener('click', () => { state.overlay = !state.overlay; $('overlayToggle').checked = state.overlay; });
+      $('viewportHelpButton').addEventListener('click', () => { const panel = [...document.querySelectorAll('details.panel')].find((item) => item.querySelector('summary')?.textContent.includes('Help')); if (panel) { panel.open = true; panel.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth', block: 'center' }); } });
+      // Collapsible side panels for fullscreen simulation
+      const workspace = document.querySelector('.workspace');
+      const rail = document.querySelector('.rail');
+      const inspector = document.querySelector('.inspector');
+      const expandRailBar = $('expandRailBar');
+      const expandInspectorBar = $('expandInspectorBar');
+      function syncWorkspace() {
+        const leftCollapsed = rail.classList.contains('is-collapsed');
+        const rightCollapsed = inspector.classList.contains('is-collapsed');
+        workspace.classList.toggle('left-collapsed', leftCollapsed && !rightCollapsed);
+        workspace.classList.toggle('right-collapsed', !leftCollapsed && rightCollapsed);
+        workspace.classList.toggle('both-collapsed', leftCollapsed && rightCollapsed);
+        if (expandRailBar) expandRailBar.hidden = !leftCollapsed;
+        if (expandInspectorBar) expandInspectorBar.hidden = !rightCollapsed;
+        // hide original left/right when both collapsed on mobile block layout is handled by display:none
+        onResize();
+      }
+      $('collapseRailBtn')?.addEventListener('click', () => { rail.classList.add('is-collapsed'); syncWorkspace(); showToast('Controls hidden — simulation expanded.'); });
+      $('expandRailBtn')?.addEventListener('click', () => { rail.classList.remove('is-collapsed'); syncWorkspace(); showToast('Controls shown.'); });
+      $('collapseInspectorBtn')?.addEventListener('click', () => { inspector.classList.add('is-collapsed'); syncWorkspace(); showToast('Panel hidden — simulation expanded.'); });
+      $('expandInspectorBtn')?.addEventListener('click', () => { inspector.classList.remove('is-collapsed'); syncWorkspace(); showToast('Panel shown.'); });
+      document.addEventListener('keydown', (event) => { if (event.target.matches('input, select, textarea')) return; if (event.code === 'Space') { event.preventDefault(); state.trafficPaused = !state.trafficPaused; updateButtons(); } if (event.key.toLowerCase() === 'r') { $('presetSelect').value = 'overview'; setCameraPreset('overview'); } });
+      document.addEventListener('pointerdown', () => ensureAudio(), { once: true, passive: true });
+      document.addEventListener('visibilitychange', () => { state.visibility = !document.hidden; if (audio && document.hidden && audio.context.state === 'running') audio.context.suspend(); });
+      window.addEventListener('resize', onResize, { passive: true });
+      $('sceneMount').addEventListener('webglcontextlost', (event) => { event.preventDefault(); showToast('WebGL context lost. Reload the page to restore the exhibit.', true); });
+    }
+
+    /* Cleanup and reset logic */
+    function cleanup() {
+      if (!renderer) return;
+      if (isAnimating) isAnimating = false;
+      for (const object of [scene, bridgeGroup, environmentGroup, waterGroup, trafficGroup, weatherGroup, overlayGroup]) {
+        if (!object) continue;
+        object.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            const list = Array.isArray(child.material) ? child.material : [child.material];
+            list.forEach((material) => material.dispose());
+          }
+        });
+      }
+      renderer.dispose();
+    }
+
+    function initRenderer() {
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, getQualityConfig().pixelRatio));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      $('sceneMount').appendChild(renderer.domElement);
+    }
+
+    function initScene() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x58a8f0);
+      scene.fog = null;
+      camera = new THREE.PerspectiveCamera(45, 1, .5, 1600);
+      camera.position.set(-560, 170, 470);
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = .075;
+      controls.target.set(0, 30, 0);
+      controls.minDistance = 18;
+      controls.maxDistance = 900;
+      controls.maxPolarAngle = Math.PI * .49;
+      controls.screenSpacePanning = true;
+      sunLight = new THREE.DirectionalLight(0xfffaec, 2.50);
+      sunLight.position.set(-450, 580, 320);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.set(2048, 2048);
+      sunLight.shadow.camera.near = 50; sunLight.shadow.camera.far = 1350;
+      sunLight.shadow.camera.left = -560; sunLight.shadow.camera.right = 560; sunLight.shadow.camera.top = 460; sunLight.shadow.camera.bottom = -460;
+      sunLight.shadow.bias = -0.0001;
+      sunLight.shadow.normalBias = 0.02;
+      scene.add(sunLight);
+      hemiLight = new THREE.HemisphereLight(0xbfe0ff, 0x455c4d, 1.25);
+      scene.add(hemiLight);
+      fillLight = new THREE.DirectionalLight(0xa5d6ff, 0.55); fillLight.position.set(260, 180, -240); scene.add(fillLight);
+      ambientLight = new THREE.AmbientLight(0xfff7ed, 0.30); scene.add(ambientLight);
+      materials.orangeSteel = makeMaterial('orangeSteel', { color: 0xee4d24, roughness: .42, metalness: .15 });
+      materials.orangeDark = makeMaterial('orangeDark', { color: 0xad321a, roughness: .52, metalness: .14 });
+      materials.orangeHot = makeMaterial('orangeHot', { color: 0xff6e3c, roughness: .38, metalness: .16 });
+      materials.anchorageConcrete = makeMaterial('anchorageConcrete', { color: 0x9da4a8, roughness: 0.85, metalness: 0.05 });
+      materials.anchorageRoof = makeMaterial('anchorageRoof', { color: 0x7e858a, roughness: 0.90 });
+      materials.cable = makeMaterial('cable', { color: 0xc88255, roughness: .42, metalness: .30 });
+      materials.asphalt = makeMaterial('asphalt', { color: 0x2e383d, roughness: .85, metalness: .04 });
+      materials.laneWhite = makeMaterial('laneWhite', { color: 0xe6ede5, roughness: .60 });
+      materials.laneYellow = makeMaterial('laneYellow', { color: 0xf2ce68, roughness: .55 });
+      materials.sidewalk = makeMaterial('sidewalk', { color: 0x96a09e, roughness: .78 });
+      materials.expansion = makeMaterial('expansion', { color: 0x283232, roughness: .7, metalness: .3 });
+      materials.lampPole = makeMaterial('lampPole', { color: 0x44585a, roughness: .50, metalness: .55 });
+      materials.bridgeLight = new THREE.MeshStandardMaterial({ color: 0xffd98d, emissive: 0xffa92f, emissiveIntensity: 1, roughness: .35 });
+      materials.sign = makeMaterial('sign', { color: 0x22585a, roughness: .6 });
+      materials.presidio = makeMaterial('presidio', { color: 0x3f6e52, roughness: .92 });
+      materials.headland = makeMaterial('headland', { color: 0x4f785e, roughness: .92 });
+      materials.bayFloor = makeMaterial('bayFloor', { color: 0x1a454e, roughness: .9 });
+      materials.shore = makeMaterial('shore', { color: 0x9c987e, roughness: .86 });
+      materials.fort = makeMaterial('fort', { color: 0x9b785a, roughness: .88 });
+      materials.fortRoof = makeMaterial('fortRoof', { color: 0x6e574d, roughness: .92 });
+      materials.fortWindow = makeMaterial('fortWindow', { color: 0x272e2e, roughness: .8 });
+      materials.building = makeMaterial('building', { color: 0x546c72, roughness: .82, metalness: .08 });
+      materials.window = new THREE.MeshStandardMaterial({ color: 0xefd58a, emissive: 0xe4a847, emissiveIntensity: .15, roughness: .3 });
+      materials.pyramid = makeMaterial('pyramid', { color: 0x82949c, roughness: .65, metalness: .18 });
+      materials.trunk = makeMaterial('trunk', { color: 0x5a4533, roughness: 1 });
+      materials.tree = makeMaterial('tree', { color: 0x2e654a, roughness: .92 });
+      materials.headlandRock = makeMaterial('headlandRock', { color: 0x607567, roughness: .92 });
+      materials.retaining = makeMaterial('retaining', { color: 0x869088, roughness: .90 });
+      materials.pier = makeMaterial('pier', { color: 0x647477, roughness: .86 });
+      materials.foam = new THREE.MeshStandardMaterial({ color: 0xeaf6fa, emissive: 0xa8dbe4, emissiveIntensity: .30, transparent: true, opacity: .78, roughness: .35 });
+      materials.boatHull = makeMaterial('boatHull', { color: 0xe4ece1, roughness: .55 });
+      materials.boatCabin = makeMaterial('boatCabin', { color: 0x588484, roughness: .55 });
+      materials.ferryCabin = makeMaterial('ferryCabin', { color: 0xd2dcda, roughness: .65 });
+      materials.cargo = makeMaterial('cargo', { color: 0x765e58, roughness: .70 });
+      materials.cargoCabin = makeMaterial('cargoCabin', { color: 0x85918a, roughness: .7 });
+      materials.container = makeMaterial('container', { color: 0xb86846, roughness: .8 });
+      materials.mast = makeMaterial('mast', { color: 0x3e4b4a, roughness: .7 });
+      materials.sail = new THREE.MeshStandardMaterial({ color: 0xf0e6c9, side: THREE.DoubleSide, roughness: .95 });
+      materials.wake = new THREE.MeshStandardMaterial({ color: 0xd8f1f8, transparent: true, opacity: .42, roughness: .4, depthWrite: false });
+      materials.vehicleGlass = makeMaterial('vehicleGlass', { color: 0x1f3e49, roughness: .18, metalness: .3 });
+      materials.tire = makeMaterial('tire', { color: 0x141a1b, roughness: .94 });
+      materials.emergencyLight = new THREE.MeshStandardMaterial({ color: 0xff4035, emissive: 0xff2016, emissiveIntensity: 3 });
+      initialiseVehicleShared();
+      buildWater();
+      buildEnvironment();
+      buildBridge();
+      trafficGroup = new THREE.Group(); trafficGroup.name = 'Pooled traffic system'; scene.add(trafficGroup);
+      buildWeather();
+      regenerateTraffic();
+      createDriverCar();
+      updateSyntheticEarthquake();
+      initPhysics();
+      applyEnvironment(true);
+      updateQuality();
+      onResize();
+    }
+
+    function animationLoop(now) {
+      if (!isAnimating) return;
+      const dt = clamp((now - lastFrame) / 1000, 0, .05);
+      lastFrame = now;
+      updateScene(dt, now);
+      requestAnimationFrame(animationLoop);
+    }
+
+    try {
+      setLoading('Creating the suspension span...');
+      initRenderer();
+      initScene();
+      bindEvents();
+      updateReadouts();
+      updateButtons();
+      updateChart($('eqChart'), eqHistory, 'eq');
+      updateChart($('windChart'), windHistory, 'wind');
+      app.setAttribute('aria-busy', 'false');
+      loading.classList.add('is-ready');
+      window.__bridgeReady = true;
+      isAnimating = true;
+      requestAnimationFrame(animationLoop);
+      window.addEventListener('beforeunload', cleanup, { once: true });
+      showToast('Exhibit ready. Choose a viewpoint or start a hazard.');
+    } catch (error) {
+      addWarning('Scene initialization failed');
+      setLoading('The scene could not be initialized.');
+      loading.querySelector('.loading-card').innerHTML = '<div class="loading-mark">Initialization error</div><h1>Scene unavailable</h1><p><strong style="color:#ff806e">The WebGL scene failed to initialize.</strong><br>Try a current browser with hardware acceleration enabled.</p>';
+      console.error('Scene initialization failed', error);
+    }
+  </script>
+</body>
+</html>
