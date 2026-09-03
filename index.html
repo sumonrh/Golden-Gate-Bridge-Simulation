@@ -8,7 +8,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
       }
     }
   </script>
@@ -626,10 +627,24 @@
             <summary>Environment</summary>
             <div class="panel-body">
               <div class="control"><label for="environmentSelect">Time and weather</label><select id="environmentSelect" title="Blend the scene between daylight, night, fog, and storm palettes"><option value="morning" selected>Sunny Morning</option><option value="midday">Bright Midday</option><option value="golden">Golden Hour</option><option value="sunset">Sunset</option><option value="night">Night</option><option value="fog">Coastal Fog</option><option value="storm">Windstorm</option></select></div>
+              <div class="control"><div class="control-row"><label for="sunElRange">Time of day — sun height</label><span class="value" id="sunElValue">38°</span></div><input id="sunElRange" type="range" min="-10" max="70" step="1" value="38" title="Override the preset sun height; lower values give long golden-hour shadows"></div>
+              <div class="control"><div class="control-row"><label for="sunAzRange">Sun direction</label><span class="value" id="sunAzValue">135°</span></div><input id="sunAzRange" type="range" min="0" max="360" step="1" value="135" title="Override the preset sun compass direction"></div>
+              <p class="small-copy">Dragging a sun slider overrides the preset above; picking a preset clears the override.</p>
               <div class="check-line"><span>Lightning flashes</span><input id="lightningToggle" type="checkbox" checked aria-label="Enable lightning flashes during severe storms"></div>
               <div class="check-line"><span>Reduced-motion mode</span><input id="reducedMotionToggle" type="checkbox" aria-label="Reduce animation and camera motion"></div>
               <div class="check-line"><span>Disable flashing lights</span><input id="disableFlashing" type="checkbox" aria-label="Disable flashing emergency and lightning lights"></div>
               <p class="small-copy">Lightning confirmation is shown before enabling frequent flashes. Reduced motion follows the browser preference by default.</p>
+            </div>
+          </details>
+
+          <details class="panel" open>
+            <summary>Graphics &amp; Post</summary>
+            <div class="panel-body">
+              <div class="check-line"><span>Bloom (glare)</span><input id="bloomToggle" type="checkbox" aria-label="Enable bloom glare post-processing"></div>
+              <div class="control"><div class="control-row"><label for="bloomRange">Bloom strength</label><span class="value" id="bloomValue">1%</span></div><input id="bloomRange" type="range" min="0" max="100" step="1" value="1" title="Lower this if bright areas wash out the scene"></div>
+              <div class="control"><div class="control-row"><label for="exposureRange">Exposure</label><span class="value" id="exposureValue">40%</span></div><input id="exposureRange" type="range" min="1" max="160" step="1" value="40" title="Overall image brightness"></div>
+              <div class="check-line"><span>Physical sky</span><input id="skyToggle" type="checkbox" checked aria-label="Show the physical sky dome"></div>
+              <p class="small-copy">If glare washes out the scene, lower bloom or exposure. The Low graphics preset bypasses post-processing entirely.</p>
             </div>
           </details>
 
@@ -769,11 +784,26 @@
 
     let THREE;
     let OrbitControls;
+    let Sky = null, RoomEnvironment = null;
+    let EffectComposer = null, RenderPass = null, UnrealBloomPass = null, OutputPass = null;
+    let skyAvailable = false, postAvailable = false;
 
     try {
       setLoading('Loading Three.js exhibit modules...');
       THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
       ({ OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
+      try {
+        ({ Sky } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/objects/Sky.js'));
+        ({ RoomEnvironment } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/environments/RoomEnvironment.js'));
+        skyAvailable = !!(Sky && RoomEnvironment);
+      } catch (addonError) { console.warn('Sky/environment addons unavailable, using classic backdrop', addonError); }
+      try {
+        ({ EffectComposer } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'));
+        ({ RenderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'));
+        ({ UnrealBloomPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js'));
+        ({ OutputPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/OutputPass.js'));
+        postAvailable = !!(EffectComposer && RenderPass && UnrealBloomPass && OutputPass);
+      } catch (postError) { console.warn('Post-processing addons unavailable, using direct rendering', postError); }
       setLoading('Generating towers, cables, and the bay...');
     } catch (error) {
       setLoading('The Three.js module could not be loaded. Start a local web server and check network access.');
@@ -856,6 +886,8 @@
       deformationScale: 10, overlay: true, vectors: true, lightning: true,
       reducedMotion: prefersReducedMotion, disableFlashing: prefersReducedMotion,
       cameraShakeIntensity: 35, autorotate: false, quality: 'high', preStormEnvironment: 'morning',
+      bloom: false, bloomStrength: 1, exposure: 40, skyOn: true,
+      sunElOverride: null, sunAzOverride: null,
       masterVolume: 35, windVolume: 35, trafficVolume: 30, hazardVolume: 40, ambientVolume: 25,
       realisticPhysics: true
     };
@@ -863,6 +895,10 @@
 
     let renderer, scene, camera, controls;
     let sunLight, hemiLight, fillLight, ambientLight;
+    let composer = null, bloomPass = null, composerReady = false;
+    let skyMesh = null, starPoints = null;
+    const sunDir = new THREE.Vector3(-0.45, 0.65, 0.35).normalize();
+    const targetSunDir = new THREE.Vector3().copy(sunDir);
     let bridgeGroup, towerGroup, environmentGroup, waterGroup, trafficGroup, weatherGroup, overlayGroup;
     let waterMesh, waterMaterial;
     let waterUniforms;
@@ -1709,18 +1745,19 @@
             varying float vWaveHeight;
 
             void main() {
-              vec3 p = position;
-              vec2 worldXZ = p.xz;
+              // True 2D swell: phase from world XZ (local plane has z=0 for all verts)
+              vec4 worldPos = modelMatrix * vec4(position, 1.0);
+              vec2 worldXZ = worldPos.xz;
 
-              // Smooth, non-aliasing multi-harmonic Pacific swell
-              float w1 = sin(worldXZ.x * 0.015 + worldXZ.y * 0.010 + uTime * 0.85) * (0.32 + uWind * 0.45);
-              float w2 = cos(worldXZ.x * 0.024 - worldXZ.y * 0.019 + uTime * 1.15) * (0.20 + uWind * 0.30);
-              float w3 = sin(worldXZ.x * 0.040 + worldXZ.y * 0.032 - uTime * 1.55) * (0.10 + uWind * 0.15);
-              p.y += w1 + w2 + w3;
-
-              vec4 worldPos = modelMatrix * vec4(p, 1.0);
+              // Long Pacific groundswell + multi-harmonic bay chop (vertical only: stable on coarse grid)
+              float w0 = sin(worldXZ.x * 0.0045 + worldXZ.y * 0.0031 + uTime * 0.55) * (0.38 + uWind * 0.25);
+              float w1 = sin(worldXZ.x * 0.015 + worldXZ.y * 0.011 + uTime * 0.85) * (0.30 + uWind * 0.45);
+              float w2 = cos(worldXZ.x * 0.024 - worldXZ.y * 0.019 + uTime * 1.15) * (0.18 + uWind * 0.30);
+              float w3 = sin(worldXZ.x * 0.043 + worldXZ.y * 0.036 - uTime * 1.55) * (0.09 + uWind * 0.16);
+              float h = w0 + w1 + w2 + w3;
+              worldPos.y += h;
               vWorld = worldPos.xyz;
-              vWaveHeight = w1 + w2 + w3;
+              vWaveHeight = h;
 
               gl_Position = projectionMatrix * viewMatrix * worldPos;
             }
@@ -1804,9 +1841,9 @@
               // Minimum 24% Fresnel reflectance so top-down views retain luminous sky blue
               float fresnel = clamp(0.24 + 0.76 * pow(clamp(1.0 - NdotV, 0.0, 1.0), 3.5), 0.0, 1.0);
 
-              // Sunlight specular glitter
-              float spec1 = pow(NdotH, 180.0) * 3.2;
-              float spec2 = pow(NdotH, 24.0) * 0.45;
+              // Sunlight specular glitter (kept under the bloom threshold except for direct sun sparkle)
+              float spec1 = pow(NdotH, 220.0) * 1.8;
+              float spec2 = pow(NdotH, 24.0) * 0.35;
               vec3 specular = uSunColor * (spec1 + spec2) * NdotL;
 
               // Subsurface scattering on wave crests
@@ -1826,8 +1863,13 @@
               float foamCrest = clamp((vWaveHeight - 0.20) / 0.25, 0.0, 1.0);
               float foamAmount = foamCrest * foamNoise * clamp((uWind - 0.25) * 2.5, 0.0, 1.0);
 
-              vec3 outColor = mix(finalColor, uFoamColor, foamAmount * 0.65);
-              float alpha = mix(0.94, 0.98, clamp(fresnel + foamAmount, 0.0, 1.0));
+              // Structure + shoreline foam: tower fenders (x=±210) and the strait banks (x=±270)
+              float towerFoam = smoothstep(26.0, 4.0, min(abs(vWorld.x - 210.0), abs(vWorld.x + 210.0))) * smoothstep(60.0, 10.0, abs(vWorld.z));
+              float shoreFoam = smoothstep(30.0, 2.0, abs(abs(vWorld.x) - 270.0)) * smoothstep(340.0, 60.0, abs(vWorld.z));
+              float structFoam = clamp(towerFoam + shoreFoam, 0.0, 1.0) * (0.30 + foamNoise * 0.70) * (0.45 + uWind * 0.55);
+
+              vec3 outColor = mix(finalColor, uFoamColor, clamp(foamAmount * 0.65 + structFoam * 0.45, 0.0, 0.8));
+              float alpha = mix(0.94, 0.98, clamp(fresnel + foamAmount + structFoam * 0.5, 0.0, 1.0));
 
               gl_FragColor = vec4(outColor, alpha);
             }
@@ -2327,7 +2369,7 @@
       const definition = vehicleTypes.find((item) => item.name === type) || vehicleTypes[0];
       const group = new THREE.Group();
       group.name = `${definition.label} vehicle`;
-      const body = new THREE.Mesh(shared.vehicleBody, new THREE.MeshStandardMaterial({ color: definition.color, roughness: .55, metalness: .1 }));
+      const body = new THREE.Mesh(shared.vehicleBody, new THREE.MeshPhysicalMaterial({ color: definition.color, roughness: .42, metalness: .15, clearcoat: .7, clearcoatRoughness: .3, envMapIntensity: .9 }));
       body.scale.set(definition.scale[0], definition.scale[1], definition.scale[2]);
       body.position.y = definition.scale[1] * .5 + .25;
       body.castShadow = true;
@@ -2516,7 +2558,7 @@
 
       for (let i = 0; i < 9; i += 1) {
         const cloud = new THREE.Group();
-        const cloudMaterial = new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
+        const cloudMaterial = materials.cloud || new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
         for (let j = 0; j < 5; j += 1) {
           const puff = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), cloudMaterial);
           puff.position.set(j * 10 - 20, Math.sin(j) * 2, Math.cos(j * 1.4) * 7);
@@ -2741,13 +2783,13 @@
 
     /* Lighting, weather, and atmosphere */
     const environmentPalettes = {
-      morning: { sky: 0x58a8f0, fog: 0x9eccf5, density: .0005, sun: 0xfffaec, hemi: 1.25, sunIntensity: 2.50, label: 'Sunny Morning', detail: 'warm California sunlight' },
-      midday: { sky: 0x489ee8, fog: 0x90c4ee, density: .0004, sun: 0xffffff, hemi: 1.40, sunIntensity: 2.80, label: 'Clear Midday', detail: 'bright direct sunlight' },
-      golden: { sky: 0x6e95c8, fog: 0xc89e76, density: .0008, sun: 0xffb86b, hemi: 1.05, sunIntensity: 2.10, label: 'Golden Hour', detail: 'warm low sun' },
-      sunset: { sky: 0x546288, fog: 0xb56c5e, density: .0012, sun: 0xff7e4c, hemi: .80, sunIntensity: 1.60, label: 'Sunset', detail: 'evening glow' },
-      night: { sky: 0x08131c, fog: 0x0d1822, density: .0023, sun: 0x6584aa, hemi: .35, sunIntensity: .50, label: 'Night', detail: 'bridge lighting' },
-      fog: { sky: 0xb2c7cf, fog: 0xc2d2d8, density: .0045, sun: 0xe0eaf0, hemi: .85, sunIntensity: 1.00, label: 'Coastal Fog', detail: 'diffuse coastal fog' },
-      storm: { sky: 0x3d535e, fog: 0x4c646f, density: .0035, sun: 0x9bb4be, hemi: .65, sunIntensity: .85, label: 'Windstorm', detail: 'rain and gusts' }
+      morning: { sky: 0x58a8f0, fog: 0x9eccf5, density: .0005, sun: 0xfffaec, hemi: 1.25, sunIntensity: 2.50, sunEl: 38, sunAz: 135, turbidity: 6, rayleigh: 1.2, exposure: .62, label: 'Sunny Morning', detail: 'warm California sunlight' },
+      midday: { sky: 0x489ee8, fog: 0x90c4ee, density: .0004, sun: 0xffffff, hemi: 1.40, sunIntensity: 2.80, sunEl: 68, sunAz: 170, turbidity: 5, rayleigh: 1.0, exposure: .60, label: 'Clear Midday', detail: 'bright direct sunlight' },
+      golden: { sky: 0x6e95c8, fog: 0xc89e76, density: .0008, sun: 0xffb86b, hemi: 1.05, sunIntensity: 2.10, sunEl: 12, sunAz: 245, turbidity: 9, rayleigh: 2.2, exposure: .58, label: 'Golden Hour', detail: 'warm low sun' },
+      sunset: { sky: 0x546288, fog: 0xb56c5e, density: .0012, sun: 0xff7e4c, hemi: .80, sunIntensity: 1.60, sunEl: 4, sunAz: 262, turbidity: 10, rayleigh: 2.8, exposure: .55, label: 'Sunset', detail: 'evening glow' },
+      night: { sky: 0x08131c, fog: 0x0d1822, density: .0023, sun: 0x6584aa, hemi: .35, sunIntensity: .50, sunEl: -14, sunAz: 300, turbidity: 4, rayleigh: .8, exposure: .42, label: 'Night', detail: 'bridge lighting' },
+      fog: { sky: 0xb2c7cf, fog: 0xc2d2d8, density: .0045, sun: 0xe0eaf0, hemi: .85, sunIntensity: 1.00, sunEl: 30, sunAz: 150, turbidity: 12, rayleigh: .6, exposure: .55, label: 'Coastal Fog', detail: 'diffuse coastal fog' },
+      storm: { sky: 0x3d535e, fog: 0x4c646f, density: .0035, sun: 0x9bb4be, hemi: .65, sunIntensity: .85, sunEl: 22, sunAz: 190, turbidity: 12, rayleigh: .7, exposure: .52, label: 'Windstorm', detail: 'rain and gusts' }
     };
     let targetPalette = environmentPalettes.morning;
     let currentPalette = { ...targetPalette };
@@ -2773,6 +2815,44 @@
       hemiLight.intensity = currentPalette.hemi;
       fillLight.intensity = currentPalette.hemi * .45;
       if (ambientLight) ambientLight.intensity = currentPalette.hemi * .25;
+      // Physical sun path: elevation/azimuth per palette, smoothly interpolated
+      currentPalette.sunEl = lerp(currentPalette.sunEl ?? targetPalette.sunEl, targetPalette.sunEl, blend);
+      currentPalette.sunAz = lerp(currentPalette.sunAz ?? targetPalette.sunAz, targetPalette.sunAz, blend);
+      const sunEl = state.sunElOverride ?? currentPalette.sunEl;
+      const sunAz = state.sunAzOverride ?? currentPalette.sunAz;
+      const sunPhi = (90 - sunEl) * degToRad;
+      const sunTheta = sunAz * degToRad;
+      targetSunDir.setFromSphericalCoords(1, sunPhi, sunTheta);
+      sunDir.lerp(targetSunDir, blend).normalize();
+      const sunDistance = 820;
+      sunLight.position.copy(sunDir).multiplyScalar(sunDistance);
+      // Night: keep a dim moonlight from the opposite azimuth so shadows stay readable
+      if (sunDir.y < 0.02) {
+        sunLight.position.set(-sunDir.x * sunDistance, Math.max(180, -sunDir.y * sunDistance + 220), -sunDir.z * sunDistance);
+        sunLight.intensity = currentPalette.sunIntensity * .55;
+      }
+      if (skyMesh) {
+        const uniforms = skyMesh.material.uniforms;
+        uniforms.sunPosition.value.copy(sunDir.y < -0.06 ? targetSunDir : sunDir);
+        currentPalette.turbidity = lerp(currentPalette.turbidity ?? targetPalette.turbidity, targetPalette.turbidity, blend);
+        currentPalette.rayleigh = lerp(currentPalette.rayleigh ?? targetPalette.rayleigh, targetPalette.rayleigh, blend);
+        currentPalette.exposure = lerp(currentPalette.exposure ?? targetPalette.exposure, targetPalette.exposure, blend);
+        uniforms.turbidity.value = currentPalette.turbidity;
+        uniforms.rayleigh.value = currentPalette.rayleigh;
+        uniforms.mieCoefficient.value = state.environment === 'fog' || state.environment === 'storm' ? 0.02 : 0.006;
+        uniforms.mieDirectionalG.value = 0.8;
+        skyMesh.material.uniforms.up.value.set(0, 1, 0);
+        skyMesh.visible = state.skyOn;
+        if (renderer) renderer.toneMappingExposure = lerp(renderer.toneMappingExposure, currentPalette.exposure * 1.7 * (state.exposure / 100), blend);
+      }
+      if (starPoints) {
+        const nightFactor = clamp(-sunDir.y * 6 + 0.25, 0, 1) * (state.environment === 'night' ? 1 : 0.25);
+        starPoints.material.opacity = lerp(starPoints.material.opacity, nightFactor * .9, blend);
+        starPoints.visible = starPoints.material.opacity > 0.02;
+      }
+      if (materials.cloud) {
+        materials.cloud.color.lerp(new THREE.Color(targetPalette.sun).lerp(new THREE.Color(0x8a979e), .55), blend * .5);
+      }
       const night = state.environment === 'night' || state.environment === 'fog' || state.environment === 'storm';
       materials.bridgeLight.emissiveIntensity = lerp(materials.bridgeLight.emissiveIntensity, night ? 3.2 : 1.0, blend);
       materials.window.emissiveIntensity = lerp(materials.window.emissiveIntensity, night ? 2.5 : .15, blend);
@@ -2807,7 +2887,7 @@
       const car = makeVehicle('sedan');
       car.name = 'Driver view car';
       // make it stand out slightly (optional tint)
-      if (car.userData && car.userData.body) car.userData.body.material = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, roughness: .45, metalness: .22 });
+      if (car.userData && car.userData.body) car.userData.body.material = new THREE.MeshPhysicalMaterial({ color: 0x4fc3f7, roughness: .4, metalness: .15, clearcoat: .7, clearcoatRoughness: .3, envMapIntensity: .9 });
       driverCar = car;
       driverCarData = { x: SUSPENSION_START - 15, lane: -0.9, direction: 1, baseSpeed: 68 };
       const pos = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
@@ -2991,6 +3071,21 @@
       $('trafficSpeedValue').textContent = `${Math.round(state.trafficSpeed)} km/h`;
       $('scaleValue').textContent = `${state.deformationScale}x`;
       $('cameraShakeValue').textContent = `${Math.round(state.cameraShakeIntensity)}%`;
+      {
+        const palette = environmentPalettes[state.environment] || environmentPalettes.morning;
+        const el = state.sunElOverride ?? palette.sunEl;
+        const az = state.sunAzOverride ?? palette.sunAz;
+        $('sunElValue').textContent = `${Math.round(el)}°`;
+        $('sunAzValue').textContent = `${Math.round(az)}°`;
+        if (document.activeElement !== $('sunElRange')) $('sunElRange').value = el;
+        if (document.activeElement !== $('sunAzRange')) $('sunAzRange').value = az;
+        $('bloomValue').textContent = `${Math.round(state.bloomStrength)}%`;
+        if (document.activeElement !== $('bloomRange')) $('bloomRange').value = state.bloomStrength;
+        $('exposureValue').textContent = `${Math.round(state.exposure)}%`;
+        if (document.activeElement !== $('exposureRange')) $('exposureRange').value = state.exposure;
+        $('bloomToggle').checked = state.bloom;
+        $('skyToggle').checked = state.skyOn;
+      }
       $('hudPga').textContent = `${state.pga.toFixed(2)} g`;
       $('hudWind').textContent = `${Math.round(state.windSpeed)} km/h`;
       $('hudScale').textContent = `${state.deformationScale}x`;
@@ -3059,6 +3154,7 @@
       $('densityRange').value = state.trafficDensity; $('trafficSpeed').value = state.trafficSpeed; $('deformationScale').value = state.deformationScale; $('realisticToggle').checked = state.realisticPhysics; $('overlayToggle').checked = state.overlay; $('vectorsToggle').checked = state.vectors;
       $('lightningToggle').checked = state.lightning; $('reducedMotionToggle').checked = state.reducedMotion; $('disableFlashing').checked = state.disableFlashing; $('cameraShakeRange').value = state.cameraShakeIntensity; $('qualitySelect').value = state.quality;
       $('masterVolume').value = state.masterVolume; $('windVolume').value = state.windVolume; $('trafficVolume').value = state.trafficVolume; $('hazardVolume').value = state.hazardVolume; $('ambientVolume').value = state.ambientVolume;
+      $('bloomToggle').checked = state.bloom; $('bloomRange').value = state.bloomStrength; $('exposureRange').value = state.exposure; $('skyToggle').checked = state.skyOn;
       eqHistory = []; windHistory = []; currentResponse = { lateral: 0, vertical: 0, longitudinal: 0, rotation: 0, tower: 0, cable: 0, ground: 0, gust: state.windSpeed, windLateral: 0 };
       updateSyntheticEarthquake();
       resetPhysics(); initPhysics();
@@ -3079,11 +3175,48 @@
       ultra: { pixelRatio: 2.2, shadows: true, particles: 900, city: 1, cable: 1 }
     };
     function getQualityConfig() { return qualityConfigs[state.quality] || qualityConfigs.high; }
+    /* AAA pass 3: HDR post-processing chain (MSAA + selective bloom), bypassed on Low */
+    function initPost() {
+      composerReady = false;
+      composer = null;
+      bloomPass = null;
+      if (!postAvailable) return;
+      try {
+        const bounds = $('viewport').getBoundingClientRect();
+        const width = Math.max(1, bounds.width);
+        const height = Math.max(1, bounds.height);
+        let target = null;
+        try {
+          if (renderer.capabilities.isWebGL2) target = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType, samples: 4 });
+        } catch (rtError) { target = null; }
+        composer = target ? new EffectComposer(renderer, target) : new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        // Half-res, high-threshold bloom: only true HDR highlights (sun disk, lamps) glow, never sky/water
+        bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, width / 2), Math.max(1, height / 2)), 0.1, 0.4, 1.0);
+        composer.addPass(bloomPass);
+        composer.addPass(new OutputPass());
+        composerReady = true;
+        updateQuality();
+      } catch (postInitError) { console.warn('Post-processing disabled', postInitError); composer = null; bloomPass = null; }
+    }
+
+    function renderFrame() {
+      if (composerReady && composer && state.quality !== 'low' && state.bloom && state.bloomStrength > 0) composer.render();
+      else renderer.render(scene, camera);
+    }
+
     function updateQuality() {
       const config = getQualityConfig();
       if (renderer) {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, config.pixelRatio));
         renderer.shadowMap.enabled = config.shadows;
+      }
+      if (composer) {
+        composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, config.pixelRatio));
+        if (bloomPass) {
+          const qualityFactor = state.quality === 'ultra' ? 1.3 : state.quality === 'medium' ? .7 : 1;
+          bloomPass.strength = (state.bloom ? state.bloomStrength / 100 : 0) * .5 * qualityFactor;
+        }
       }
       if (rainPoints) rainPoints.geometry.setDrawRange(0, config.particles);
       if (dustPoints) dustPoints.geometry.setDrawRange(0, Math.round(180 * config.city));
@@ -3114,6 +3247,7 @@
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+      if (composer) composer.setSize(width, height);
     }
 
     function updateScene(dt, now) {
@@ -3153,7 +3287,7 @@
       fpsFrames += 1;
       if (fpsFrames >= 30) { fps = fpsAccumulator / fpsFrames; fpsAccumulator = 0; fpsFrames = 0; $('statusFps').textContent = fps.toFixed(0); }
       if (Math.floor(now / 1000) % 3 === 0) updateDiagnostics();
-      renderer.render(scene, camera);
+      renderFrame();
     }
 
     function updateCables(response, time) {
@@ -3321,7 +3455,13 @@
       $('densityRange').addEventListener('change', () => regenerateTraffic());
       $('trafficSpeed').addEventListener('input', (event) => { state.trafficSpeed = Number(event.target.value); for (const vehicle of vehicles) vehicle.baseSpeed = state.trafficSpeed * .8; updateReadouts(); });
       $('incidentButton').addEventListener('click', () => { state.incident = !state.incident; updateButtons(); });
-      $('environmentSelect').addEventListener('change', (event) => { state.environment = event.target.value; applyEnvironment(); });
+      $('environmentSelect').addEventListener('change', (event) => { state.environment = event.target.value; state.sunElOverride = null; state.sunAzOverride = null; applyEnvironment(); updateReadouts(); });
+      $('sunElRange').addEventListener('input', (event) => { state.sunElOverride = Number(event.target.value); updateReadouts(); });
+      $('sunAzRange').addEventListener('input', (event) => { state.sunAzOverride = Number(event.target.value); updateReadouts(); });
+      $('bloomToggle').addEventListener('change', (event) => { state.bloom = event.target.checked; updateQuality(); });
+      $('bloomRange').addEventListener('input', (event) => { state.bloomStrength = Number(event.target.value); updateQuality(); updateReadouts(); });
+      $('exposureRange').addEventListener('input', (event) => { state.exposure = Number(event.target.value); updateReadouts(); });
+      $('skyToggle').addEventListener('change', (event) => { state.skyOn = event.target.checked; });
       $('lightningToggle').addEventListener('change', (event) => { if (event.target.checked && !state.disableFlashing && !window.confirm('Frequent lightning flashes may be uncomfortable for some viewers. Enable them?')) { event.target.checked = false; return; } state.lightning = event.target.checked; });
       $('reducedMotionToggle').addEventListener('change', (event) => { state.reducedMotion = event.target.checked; });
       $('disableFlashing').addEventListener('change', (event) => { state.disableFlashing = event.target.checked; if (state.disableFlashing) { state.lightning = false; $('lightningToggle').checked = false; } });
@@ -3381,6 +3521,8 @@
           }
         });
       }
+      try { if (composer && composer.dispose) composer.dispose(); } catch (composerDisposeError) { /* best effort */ }
+      composer = null; composerReady = false;
       renderer.dispose();
     }
 
@@ -3422,9 +3564,45 @@
       scene.add(hemiLight);
       fillLight = new THREE.DirectionalLight(0xa5d6ff, 0.55); fillLight.position.set(260, 180, -240); scene.add(fillLight);
       ambientLight = new THREE.AmbientLight(0xfff7ed, 0.30); scene.add(ambientLight);
-      materials.orangeSteel = makeMaterial('orangeSteel', { color: 0xee4d24, roughness: .42, metalness: .15 });
-      materials.orangeDark = makeMaterial('orangeDark', { color: 0xad321a, roughness: .52, metalness: .14 });
-      materials.orangeHot = makeMaterial('orangeHot', { color: 0xff6e3c, roughness: .38, metalness: .16 });
+      // AAA pass 1: physical sky dome, night starfield, and image-based lighting
+      if (skyAvailable && Sky) {
+        try {
+          skyMesh = new Sky();
+          skyMesh.scale.setScalar(8500);
+          skyMesh.name = 'Physical sky dome';
+          scene.add(skyMesh);
+        } catch (skyError) { console.warn('Sky dome disabled', skyError); skyMesh = null; }
+      }
+      if (skyAvailable && RoomEnvironment) {
+        try {
+          const pmrem = new THREE.PMREMGenerator(renderer);
+          scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
+          pmrem.dispose();
+        } catch (envError) { console.warn('Image-based lighting disabled', envError); }
+      }
+      try {
+        const starCount = 700;
+        const starPositions = new Float32Array(starCount * 3);
+        const starSeed = seeded(1977);
+        for (let i = 0; i < starCount; i += 1) {
+          const theta = starSeed() * TAU;
+          const phi = Math.acos(1 - starSeed() * 0.85);
+          const radius = 8200;
+          starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+          starPositions[i * 3 + 1] = Math.abs(radius * Math.cos(phi)) + 150;
+          starPositions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+        }
+        const starGeometry = new THREE.BufferGeometry();
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starPoints = new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xcfe0ff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+        starPoints.name = 'Night starfield';
+        starPoints.visible = false;
+        starPoints.frustumCulled = false;
+        scene.add(starPoints);
+      } catch (starError) { console.warn('Starfield disabled', starError); starPoints = null; }
+      materials.orangeSteel = makeMaterial('orangeSteel', { color: 0xee4d24, roughness: .38, metalness: .28 });
+      materials.orangeDark = makeMaterial('orangeDark', { color: 0xad321a, roughness: .48, metalness: .25 });
+      materials.orangeHot = makeMaterial('orangeHot', { color: 0xff6e3c, roughness: .34, metalness: .28 });
       materials.anchorageConcrete = makeMaterial('anchorageConcrete', { color: 0x9da4a8, roughness: 0.85, metalness: 0.05 });
       materials.anchorageRoof = makeMaterial('anchorageRoof', { color: 0x7e858a, roughness: 0.90 });
       materials.cable = makeMaterial('cable', { color: 0xc88255, roughness: .42, metalness: .30 });
@@ -3478,6 +3656,18 @@
       materials.vehicleGlass = makeMaterial('vehicleGlass', { color: 0x1f3e49, roughness: .18, metalness: .3 });
       materials.tire = makeMaterial('tire', { color: 0x141a1b, roughness: .94 });
       materials.emergencyLight = new THREE.MeshStandardMaterial({ color: 0xff4035, emissive: 0xff2016, emissiveIntensity: 3 });
+      materials.cloud = new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
+      // Balance image-based lighting so the stylized palette keeps its art direction
+      try {
+        const envBalance = {
+          orangeSteel: .65, orangeDark: .5, orangeHot: .7, cable: 1.0, asphalt: .25,
+          building: .5, pyramid: .8, salesforce: 1.1, vehicleGlass: 1.2, sail: .3,
+          water: .0, foam: .4, wake: .4, window: .8, bridgeLight: .4
+        };
+        for (const [name, material] of Object.entries(materials)) {
+          if (material && 'envMapIntensity' in material) material.envMapIntensity = envBalance[name] ?? .55;
+        }
+      } catch (envBalanceError) { console.warn('Environment balance skipped', envBalanceError); }
       initialiseVehicleShared();
       buildWater();
       buildEnvironment();
@@ -3490,6 +3680,7 @@
       initPhysics();
       applyEnvironment(true);
       updateQuality();
+      initPost();
       onResize();
     }
 
