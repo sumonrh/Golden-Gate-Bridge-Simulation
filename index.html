@@ -1408,9 +1408,13 @@
     }
 
     function createLandMasses() {
-      createBox(environmentGroup, new THREE.BoxGeometry(270, 7, 240), materials.presidio, -405, -2, 0);
-      createBox(environmentGroup, new THREE.BoxGeometry(270, 7, 260), materials.headland, 405, -2, 0);
-      createBox(environmentGroup, new THREE.BoxGeometry(1050, 2, 700), materials.bayFloor, 0, FOUNDATION_BOTTOM_Y - 1, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(520, 7, 620), materials.presidio, -530, -2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(560, 7, 640), materials.headland, 550, -2, 0);
+      // Distant shoreline bluffs so land meets the horizon instead of ending mid-water
+      createBox(environmentGroup, new THREE.BoxGeometry(900, 6, 260), materials.cityHill, -1050, -2.5, -320);
+      createBox(environmentGroup, new THREE.BoxGeometry(900, 6, 260), materials.cityHill, -1050, -2.5, 320);
+      createBox(environmentGroup, new THREE.BoxGeometry(220, 10, 900), materials.presidio, -620, -3, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(12000, 2, 9000), materials.bayFloor, 0, FOUNDATION_BOTTOM_Y - 1, 0);
       const waterfront = createBox(environmentGroup, new THREE.BoxGeometry(150, 2, 60), materials.shore, -285, 1, -75);
       waterfront.rotation.y = -.08;
     }
@@ -1468,46 +1472,109 @@
 
     function createCity() {
       const random = seeded(90210);
-      const count = 48;
+      const count = 170;
+      const palette = [new THREE.Color(0x546c72), new THREE.Color(0x6b7f85), new THREE.Color(0x8a9a94), new THREE.Color(0xb0a893), new THREE.Color(0x4a5e66), new THREE.Color(0x7d94a8)];
       const buildings = new THREE.InstancedMesh(shared.buildingGeometry, materials.building, count);
-      const windows = new THREE.InstancedMesh(shared.windowGeometry, materials.window, 280);
+      const windows = new THREE.InstancedMesh(shared.windowGeometry, materials.window, 2800);
+      const rooftops = new THREE.InstancedMesh(shared.buildingGeometry, materials.rooftop, count);
       buildings.name = 'Procedural San Francisco skyline';
       windows.name = 'Distant illuminated windows';
+      rooftops.name = 'Rooftop caps';
       const matrix = new THREE.Matrix4();
+      const quat = new THREE.Quaternion();
+      const color = new THREE.Color();
       let windowIndex = 0;
+      const downtownX = -470, downtownZ = 10;
       for (let i = 0; i < count; i += 1) {
-        const x = -455 + random() * 120;
-        const z = -112 + random() * 224;
-        const width = 7 + random() * 14;
+        // Clustered blocks: downtown core + Richmond / Sunset spread + waterfront row
+        let x, z, coreBoost;
+        const pick = random();
+        if (pick < 0.45) { x = downtownX + (random() - .5) * 170; z = downtownZ + (random() - .5) * 200; }
+        else if (pick < 0.75) { x = -620 + random() * 180; z = (random() - .5) * 420; }
+        else { x = -360 + random() * 90; z = (random() > .5 ? 1 : -1) * (120 + random() * 90); }
+        const distDowntown = Math.hypot(x - downtownX, (z - downtownZ) * 1.2);
+        coreBoost = Math.max(0, 1 - distDowntown / 190);
+        const width = 7 + random() * 15;
         const depth = 7 + random() * 16;
-        const height = 12 + random() * 55 * (1 - Math.abs(z) / 250);
-        matrix.compose(new THREE.Vector3(x, height / 2 + 1, z), new THREE.Quaternion(), new THREE.Vector3(width, height, depth));
+        const height = 8 + random() * 22 + coreBoost * (55 + random() * 75);
+        matrix.compose(new THREE.Vector3(x, height / 2 + 1, z), quat, new THREE.Vector3(width, height, depth));
         buildings.setMatrixAt(i, matrix);
-        for (let row = 0; row < Math.floor(height / 7) && windowIndex < 280; row += 1) {
-          for (const side of [-1, 1]) {
-            const wx = x + (random() - .5) * width * .6;
-            const wz = z + side * (depth / 2 + .05);
-            matrix.compose(new THREE.Vector3(wx, 5 + row * 7, wz), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1));
-            windows.setMatrixAt(windowIndex++, matrix);
+        color.copy(palette[Math.floor(random() * palette.length)]);
+        color.offsetHSL(0, 0, (random() - .5) * 0.06);
+        buildings.setColorAt(i, color);
+        // Rooftop cap / setback
+        matrix.compose(new THREE.Vector3(x, height + 1.4, z), quat, new THREE.Vector3(width * .55, .8, depth * .55));
+        rooftops.setMatrixAt(i, matrix);
+        // Dense window strips on both faces (capped per building so light spreads evenly)
+        const rows = Math.floor(height / 5);
+        const cols = Math.max(1, Math.floor(width / 5));
+        let placed = 0;
+        for (let row = 0; row < rows && windowIndex < 2800 && placed < 18; row += 1) {
+          for (let c = 0; c < cols && windowIndex < 2800 && placed < 18; c += 1) {
+            for (const side of [-1, 1]) {
+              if (placed >= 18 || windowIndex >= 2800) break;
+              if (random() < 0.35) continue;
+              const wx = x - width / 2 + (c + .5) * (width / cols);
+              const wz = z + side * (depth / 2 + .06);
+              matrix.compose(new THREE.Vector3(wx, 4.5 + row * 5, wz), quat, new THREE.Vector3(1, 1, 1));
+              windows.setMatrixAt(windowIndex++, matrix);
+              placed += 1;
+            }
           }
         }
       }
       windows.count = windowIndex;
       buildings.instanceMatrix.needsUpdate = true;
+      if (buildings.instanceColor) buildings.instanceColor.needsUpdate = true;
       windows.instanceMatrix.needsUpdate = true;
+      rooftops.instanceMatrix.needsUpdate = true;
       buildings.castShadow = true;
       buildings.receiveShadow = true;
-      environmentGroup.add(buildings, windows);
+      environmentGroup.add(buildings, rooftops, windows);
 
-      const pyramid = new THREE.Mesh(new THREE.ConeGeometry(13, 62, 4), materials.pyramid);
+      // Landmark silhouettes
+      const pyramid = new THREE.Mesh(new THREE.ConeGeometry(13, 68, 4), materials.pyramid);
       pyramid.name = 'Transamerica inspired silhouette';
-      pyramid.position.set(-390, 32, 6);
+      pyramid.position.set(-452, 35, 14);
       pyramid.rotation.y = Math.PI / 4;
       pyramid.castShadow = true;
       pyramid.receiveShadow = true;
       environmentGroup.add(pyramid);
-      for (const z of [-98, -66, 66, 98]) {
-        for (let x = -478; x < -270; x += 38) createTree(x, 5, z, .8 + random() * .5);
+      const salesforce = new THREE.Mesh(new THREE.CylinderGeometry(9, 13, 105, 12), materials.salesforce);
+      salesforce.name = 'Salesforce inspired tower';
+      salesforce.position.set(-492, 53, -28);
+      salesforce.castShadow = true;
+      environmentGroup.add(salesforce);
+      const salesforceCrown = new THREE.Mesh(new THREE.CylinderGeometry(2, 9, 18, 12), materials.salesforce);
+      salesforceCrown.position.set(-492, 114, -28);
+      environmentGroup.add(salesforceCrown);
+      // Coit Tower on Telegraph Hill
+      const telegraphHill = new THREE.Mesh(shared.hillGeometry, materials.cityHill);
+      telegraphHill.position.set(-420, 8, 120);
+      telegraphHill.scale.set(70, 34, 60);
+      environmentGroup.add(telegraphHill);
+      const coit = new THREE.Mesh(new THREE.CylinderGeometry(4, 5, 26, 10), materials.lighthouse);
+      coit.position.set(-420, 34, 120);
+      coit.castShadow = true;
+      environmentGroup.add(coit);
+      // Ferry Building clock tower on the waterfront
+      const ferryBase = createBox(environmentGroup, new THREE.BoxGeometry(34, 10, 12), materials.ferryTower, -318, 6, 40);
+      ferryBase.rotation.y = .06;
+      const ferryTower = createBox(environmentGroup, new THREE.BoxGeometry(7, 34, 7), materials.ferryTower, -318, 24, 40);
+      ferryTower.rotation.y = .06;
+      // Twin SF hills behind downtown for depth
+      for (const [hx, hz, sx, sy, sz] of [[-640, -160, 190, 70, 150], [-660, 140, 210, 85, 170], [-590, 0, 150, 46, 120]]) {
+        const hill = new THREE.Mesh(shared.hillGeometry, materials.cityHill);
+        hill.position.set(hx, sy * .28, hz);
+        hill.scale.set(sx, sy, sz);
+        hill.rotation.y = random() * TAU;
+        hill.receiveShadow = true;
+        environmentGroup.add(hill);
+      }
+      // Presidio forest + street trees
+      for (let i = 0; i < 46; i += 1) createTree(-560 + random() * 130, 2.5, -190 + random() * 120, .9 + random() * .9);
+      for (const z of [-98, -66, 66, 98, 130, -130]) {
+        for (let x = -560; x < -300; x += 30) { if (random() < .8) createTree(x + random() * 8, 3.5, z + random() * 6, .8 + random() * .5); }
       }
     }
 
@@ -1515,7 +1582,9 @@
       const group = new THREE.Group();
       group.position.set(x, y, z);
       const trunk = createBox(group, shared.trunkGeometry, materials.trunk, 0, .6, 0);
-      const canopy = new THREE.Mesh(shared.treeGeometry, materials.tree);
+      const canopyHash = Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.55) % 1;
+      const canopyMat = canopyHash < .4 ? materials.treeDark : materials.tree;
+      const canopy = new THREE.Mesh(shared.treeGeometry, canopyMat);
       canopy.position.y = 2.5; canopy.scale.set(scale, scale, scale);
       canopy.castShadow = true;
       canopy.receiveShadow = true;
@@ -1525,34 +1594,92 @@
 
     function createHeadlands() {
       const random = seeded(441);
-      for (let i = 0; i < 17; i += 1) {
-        const x = 290 + random() * 220;
-        const z = (random() > .5 ? 1 : -1) * (50 + random() * 90);
-        const hill = new THREE.Mesh(shared.hillGeometry, materials.headlandRock);
-        hill.position.set(x, 15 + random() * 17, z);
-        hill.scale.set(30 + random() * 48, 30 + random() * 45, 26 + random() * 44);
+      const hillMats = [materials.headlandGrass, materials.headlandRock, materials.headlandDry];
+      // Near Marin Headlands ridge: taller, detailed, tree-covered
+      for (let i = 0; i < 26; i += 1) {
+        const x = 295 + random() * 260;
+        const z = (random() > .5 ? 1 : -1) * (45 + random() * 130);
+        const mat = hillMats[Math.floor(random() * hillMats.length)];
+        const hill = new THREE.Mesh(shared.hillGeometry, mat);
+        hill.position.set(x, 12 + random() * 20, z);
+        hill.scale.set(34 + random() * 60, 30 + random() * 52, 30 + random() * 54);
         hill.rotation.y = random() * TAU;
         hill.castShadow = true;
         hill.receiveShadow = true;
         environmentGroup.add(hill);
-        for (let tree = 0; tree < 3; tree += 1) createTree(x + random() * 30 - 15, 13, z + random() * 28 - 14, .65 + random() * .55);
+        // Rocky outcrops on the slope
+        if (random() < .6) {
+          const rock = new THREE.Mesh(shared.rockGeometry, materials.cliffRock);
+          rock.position.set(x + (random() - .5) * 40, 6 + random() * 14, z + (random() - .5) * 30);
+          rock.scale.set(3 + random() * 7, 2.5 + random() * 5, 3 + random() * 6);
+          rock.rotation.set(random() * TAU, random() * TAU, 0);
+          rock.castShadow = true;
+          environmentGroup.add(rock);
+        }
+        const treeCount = 4 + Math.floor(random() * 4);
+        for (let tree = 0; tree < treeCount; tree += 1) {
+          const tx = x + random() * 44 - 22, tz = z + random() * 40 - 20;
+          createTree(tx, 8 + random() * 10, tz, .7 + random() * .8);
+        }
       }
+      // Steep coastal cliffs right at the Golden Gate strait
+      for (const z of [-95, 95]) {
+        for (let i = 0; i < 4; i += 1) {
+          const cliff = new THREE.Mesh(shared.rockGeometry, materials.cliffRock);
+          cliff.position.set(285 + i * 32 + random() * 10, 4 + random() * 6, z + (random() - .5) * 10);
+          cliff.scale.set(16 + random() * 10, 12 + random() * 10, 10 + random() * 8);
+          cliff.rotation.y = random() * TAU;
+          cliff.castShadow = true;
+          cliff.receiveShadow = true;
+          environmentGroup.add(cliff);
+        }
+      }
+      // Far Mount Tamalpais backdrop: huge hazy silhouettes toward the horizon
+      for (let i = 0; i < 10; i += 1) {
+        const x = 750 + random() * 900;
+        const z = (random() - .5) * 1600;
+        const hill = new THREE.Mesh(shared.hillGeometry, materials.headlandFar);
+        hill.position.set(x, 20 + random() * 30, z);
+        hill.scale.set(220 + random() * 260, 110 + random() * 130, 200 + random() * 220);
+        hill.rotation.y = random() * TAU;
+        environmentGroup.add(hill);
+      }
+      // Point Bonita lighthouse on the outer headland tip
+      const lightRock = new THREE.Mesh(shared.rockGeometry, materials.cliffRock);
+      lightRock.position.set(298, 5, -148);
+      lightRock.scale.set(14, 9, 12);
+      environmentGroup.add(lightRock);
+      const lightTower = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.8, 12, 10), materials.lighthouse);
+      lightTower.position.set(298, 15, -148);
+      lightTower.castShadow = true;
+      environmentGroup.add(lightTower);
+      const lightTop = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 3, 10), materials.lighthouseTop);
+      lightTop.position.set(298, 22.5, -148);
+      environmentGroup.add(lightTop);
       for (const z of [-111, 111]) {
-        const wall = createBox(environmentGroup, new THREE.BoxGeometry(150, 9, 3), materials.retaining, 350, 8, z);
+        const wall = createBox(environmentGroup, new THREE.BoxGeometry(190, 9, 3), materials.retaining, 360, 8, z);
         wall.rotation.y = z < 0 ? -.12 : .12;
       }
+      // Hawk Hill / Battery Yates hints
+      createBox(environmentGroup, new THREE.BoxGeometry(22, 6, 10), materials.retaining, 330, 12, -60);
+      createBox(environmentGroup, new THREE.BoxGeometry(10, 5, 18), materials.retaining, 345, 16, 72);
     }
 
     function createShoreline() {
-      for (const z of [-82, 82]) {
+      for (const z of [-125, -82, 82, 125]) {
         const points = [];
-        for (let i = 0; i < 26; i += 1) points.push(new THREE.Vector3(-350 + i * 18, 1.2, z + Math.sin(i * .7) * 4));
+        for (let i = 0; i < 48; i += 1) points.push(new THREE.Vector3(-680 + i * 16, 1.2, z + Math.sin(i * .7) * 5));
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         environmentGroup.add(new THREE.Line(geometry, makeLineMaterial(0xd4e6d2, .55, 2)));
       }
-      for (let x = -335; x <= -255; x += 16) {
-        const pier = createBox(environmentGroup, new THREE.BoxGeometry(10, 2, 56), materials.pier, x, 1, -95);
+      // Extended municipal pier row + marina docks
+      for (let x = -420; x <= -280; x += 20) {
+        const pier = createBox(environmentGroup, new THREE.BoxGeometry(10, 2, 60), materials.pier, x, 1, -140);
         pier.rotation.y = .05;
+      }
+      for (let x = -400; x <= -300; x += 25) {
+        const pier = createBox(environmentGroup, new THREE.BoxGeometry(8, 1.6, 34), materials.pier, x, .9, 138);
+        pier.rotation.y = -.04;
       }
     }
 
@@ -1706,17 +1833,18 @@
             }
           `,
           transparent: true,
-          side: THREE.DoubleSide
+          side: THREE.FrontSide,
+          depthWrite: true
         });
       } catch (error) {
         addWarning('Water shader fallback active');
         waterMaterial = new THREE.MeshStandardMaterial({ color: 0x1d6f88, roughness: .18, metalness: .15, transparent: true, opacity: .94 });
       }
-      const waterGeometry = new THREE.PlaneGeometry(1400, 900, 160, 100);
+      const waterGeometry = new THREE.PlaneGeometry(12000, 9000, 200, 150);
       waterGeometry.rotateX(-Math.PI / 2);
       waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
       waterMesh.position.set(0, 0, 0);
-      waterMesh.receiveShadow = true;
+      waterMesh.receiveShadow = false;
       waterMesh.name = 'Bay surface';
       waterGroup.add(waterMesh);
       for (const z of [-105, 105]) {
@@ -3145,8 +3273,8 @@
         if (!state.reducedMotion) boat.position.x += path.speed * dt * (state.windstorm ? 1 + state.windSpeed / 500 : 1);
         boat.position.y = path.y + Math.sin(time * .8 + path.offset) * .25;
         boat.position.z = path.baseZ + Math.sin(time * .16 + path.offset) * 6;
-        if (boat.position.x > 540) boat.position.x = -540;
-        if (boat.position.x < -540) boat.position.x = 540;
+        if (boat.position.x > 2200) boat.position.x = -2200;
+        if (boat.position.x < -2200) boat.position.x = 2200;
       }
     }
 
@@ -3270,15 +3398,15 @@
     function initScene() {
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x58a8f0);
-      scene.fog = null;
-      camera = new THREE.PerspectiveCamera(45, 1, .5, 1600);
+      scene.fog = new THREE.FogExp2(0x9eccf5, 0.0005);
+      camera = new THREE.PerspectiveCamera(45, 1, 1, 10000);
       camera.position.set(-560, 170, 470);
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = .075;
       controls.target.set(0, 30, 0);
       controls.minDistance = 18;
-      controls.maxDistance = 900;
+      controls.maxDistance = 1600;
       controls.maxPolarAngle = Math.PI * .49;
       controls.screenSpacePanning = true;
       sunLight = new THREE.DirectionalLight(0xfffaec, 2.50);
@@ -3323,7 +3451,18 @@
       materials.pyramid = makeMaterial('pyramid', { color: 0x82949c, roughness: .65, metalness: .18 });
       materials.trunk = makeMaterial('trunk', { color: 0x5a4533, roughness: 1 });
       materials.tree = makeMaterial('tree', { color: 0x2e654a, roughness: .92 });
+      materials.treeDark = makeMaterial('treeDark', { color: 0x1f4a38, roughness: .95 });
       materials.headlandRock = makeMaterial('headlandRock', { color: 0x607567, roughness: .92 });
+      materials.headlandGrass = makeMaterial('headlandGrass', { color: 0x4d7a52, roughness: .95 });
+      materials.headlandDry = makeMaterial('headlandDry', { color: 0x7a8460, roughness: .95 });
+      materials.headlandFar = makeMaterial('headlandFar', { color: 0x5d7f86, roughness: 1 });
+      materials.cliffRock = makeMaterial('cliffRock', { color: 0x6b6f66, roughness: .95 });
+      materials.cityHill = makeMaterial('cityHill', { color: 0x4a7058, roughness: .95 });
+      materials.lighthouse = makeMaterial('lighthouse', { color: 0xf2ede2, roughness: .7 });
+      materials.lighthouseTop = makeMaterial('lighthouseTop', { color: 0xb33a2e, roughness: .6 });
+      materials.ferryTower = makeMaterial('ferryTower', { color: 0xc9b78f, roughness: .8 });
+      materials.salesforce = makeMaterial('salesforce', { color: 0x8fa8b8, roughness: .45, metalness: .3 });
+      materials.rooftop = makeMaterial('rooftop', { color: 0x3c4a4e, roughness: .9 });
       materials.retaining = makeMaterial('retaining', { color: 0x869088, roughness: .90 });
       materials.pier = makeMaterial('pier', { color: 0x647477, roughness: .86 });
       materials.foam = new THREE.MeshStandardMaterial({ color: 0xeaf6fa, emissive: 0xa8dbe4, emissiveIntensity: .30, transparent: true, opacity: .78, roughness: .35 });
