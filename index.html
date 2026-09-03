@@ -870,7 +870,8 @@
     let trussGroup, trussMembers = [];
     let deckCenterLine, deckNodes, displacementVectors;
     let towerReferences = [];
-    let rainPoints, rainPositions, dustPoints, dustPositions, birdPoints, birdPositions;
+    let rainPoints, rainPositions, dustPoints, dustPositions;
+    let seagullGroup, seagulls = [];
     let cloudBank = [], boats = [];
     let vehicles = [];
     let vehicleSerial = 0;
@@ -1039,11 +1040,11 @@
       towerGroup.name = 'International Orange towers';
       bridgeGroup.add(towerGroup);
 
-      shared.deckGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 1.35, DECK_WIDTH);
-      shared.trussGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 1.2, 1.1);
+      shared.deckGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 1.35, DECK_WIDTH);
+      shared.trussGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 1.2, 1.1);
       shared.laneGeometry = new THREE.BoxGeometry(6.5, .06, .12);
-      shared.sidewalkGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, .42, 1.2);
-      shared.barrierGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .2, 2.2, .36);
+      shared.sidewalkGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .42, 1.2);
+      shared.barrierGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 2.2, .36);
       shared.poleGeometry = new THREE.CylinderGeometry(.14, .19, 8.5, 8);
       shared.lampGeometry = new THREE.SphereGeometry(.42, 8, 6);
       shared.towerLegGeometry = new THREE.BoxGeometry(3.3, TOWER_TOP_Y - FOUNDATION_BOTTOM_Y, 2.3);
@@ -1073,11 +1074,6 @@
           const stripe = createBox(bridgeGroup, shared.laneGeometry, index === 1 ? materials.laneYellow : materials.laneWhite, x, DECK_Y + .72, z);
           stripe.userData.centerX = x; stripe.userData.baseZ = z; stripe.userData.baseY = .72;
         }
-      }
-
-      for (const x of [SUSPENSION_START + 55, -TOWER_X, 0, TOWER_X, SUSPENSION_END - 55]) {
-        const joint = createBox(bridgeGroup, new THREE.BoxGeometry(1.1, .1, DECK_WIDTH - .8), materials.expansion, x, DECK_Y + .74, 0);
-        joint.userData.centerX = x; joint.userData.baseZ = 0; joint.userData.baseY = .74;
       }
 
       [-TOWER_X, TOWER_X].forEach((x) => createTower(x));
@@ -2376,17 +2372,19 @@
       dustPoints = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0xc9bea0, size: 1.1, transparent: true, opacity: .0, depthWrite: false }));
       weatherGroup.add(dustPoints);
 
-      const birdCount = 22;
-      birdPositions = new Float32Array(birdCount * 3);
-      for (let i = 0; i < birdCount; i += 1) {
-        birdPositions[i * 3] = -WEATHER_X_HALF_WIDTH + random() * WEATHER_X_HALF_WIDTH * 2;
-        birdPositions[i * 3 + 1] = 60 + random() * 80;
-        birdPositions[i * 3 + 2] = -120 + random() * 240;
-      }
-      const birdGeometry = new THREE.BufferGeometry();
-      birdGeometry.setAttribute('position', new THREE.BufferAttribute(birdPositions, 3));
-      birdPoints = new THREE.Points(birdGeometry, new THREE.PointsMaterial({ color: 0x223b3c, size: 1.8, sizeAttenuation: true }));
-      weatherGroup.add(birdPoints);
+      shared.seagullBody = new THREE.ConeGeometry(0.32, 2.0, 6);
+      shared.seagullBody.rotateX(-Math.PI / 2);
+      shared.seagullHead = new THREE.SphereGeometry(0.26, 6, 6);
+      shared.seagullHead.scale(0.9, 0.9, 1.2);
+      shared.seagullBeak = new THREE.ConeGeometry(0.09, 0.55, 4);
+      shared.seagullBeak.rotateX(-Math.PI / 2);
+      shared.seagullTail = new THREE.BoxGeometry(0.35, 0.04, 0.75);
+      shared.seagullInnerWing = new THREE.BoxGeometry(1.3, 0.04, 0.55);
+      shared.seagullInnerWing.translate(-0.65, 0, 0);
+      shared.seagullOuterWing = new THREE.BoxGeometry(1.2, 0.035, 0.42);
+      shared.seagullOuterWing.translate(-0.6, 0, -0.06);
+
+      createSeagullFlock();
 
       for (let i = 0; i < 9; i += 1) {
         const cloud = new THREE.Group();
@@ -2400,6 +2398,183 @@
         cloud.position.set(-500 + i * 125, 125 + (i % 3) * 16, -160 + (i % 4) * 95);
         cloudBank.push(cloud);
         weatherGroup.add(cloud);
+      }
+    }
+
+    function createSeagullMesh() {
+      const gull = new THREE.Group();
+      gull.name = 'Seagull';
+
+      const body = new THREE.Mesh(shared.seagullBody, materials.seagullWhite);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      gull.add(body);
+
+      const head = new THREE.Mesh(shared.seagullHead, materials.seagullWhite);
+      head.position.set(0, 0.12, -0.95);
+      head.castShadow = true;
+      gull.add(head);
+
+      const beak = new THREE.Mesh(shared.seagullBeak, materials.seagullBeak);
+      beak.position.set(0, 0.08, -1.45);
+      gull.add(beak);
+
+      const tail = new THREE.Mesh(shared.seagullTail, materials.seagullWhite);
+      tail.position.set(0, 0.05, 1.15);
+      tail.rotation.x = -0.08;
+      gull.add(tail);
+
+      const leftWing = new THREE.Group();
+      leftWing.position.set(-0.25, 0.12, -0.15);
+      const leftInner = new THREE.Mesh(shared.seagullInnerWing, materials.seagullGray);
+      leftInner.castShadow = true;
+      leftWing.add(leftInner);
+
+      const leftOuter = new THREE.Group();
+      leftOuter.position.set(-1.3, 0, 0);
+      const leftOuterMesh = new THREE.Mesh(shared.seagullOuterWing, materials.seagullDark);
+      leftOuterMesh.castShadow = true;
+      leftOuter.add(leftOuterMesh);
+      leftWing.add(leftOuter);
+
+      const rightWing = new THREE.Group();
+      rightWing.position.set(0.25, 0.12, -0.15);
+      const rightInner = new THREE.Mesh(shared.seagullInnerWing, materials.seagullGray);
+      rightInner.scale.set(-1, 1, 1);
+      rightInner.castShadow = true;
+      rightWing.add(rightInner);
+
+      const rightOuter = new THREE.Group();
+      rightOuter.position.set(1.3, 0, 0);
+      const rightOuterMesh = new THREE.Mesh(shared.seagullOuterWing, materials.seagullDark);
+      rightOuterMesh.scale.set(-1, 1, 1);
+      rightOuterMesh.castShadow = true;
+      rightOuter.add(rightOuterMesh);
+      rightWing.add(rightOuter);
+
+      gull.add(leftWing, rightWing);
+
+      gull.userData = { leftWing, rightWing, leftOuter, rightOuter };
+      gull.scale.set(0.85, 0.85, 0.85);
+      return gull;
+    }
+
+    function createSeagullFlock() {
+      seagullGroup = new THREE.Group();
+      seagullGroup.name = 'Seagull flock';
+      weatherGroup.add(seagullGroup);
+      seagulls = [];
+
+      const random = seeded(941);
+      const count = 22;
+      for (let i = 0; i < count; i += 1) {
+        const mesh = createSeagullMesh();
+        const startX = -WEATHER_X_HALF_WIDTH + random() * WEATHER_X_HALF_WIDTH * 2;
+        const startY = 35 + random() * 115;
+        const startZ = -180 + random() * 360;
+        mesh.position.set(startX, startY, startZ);
+        seagullGroup.add(mesh);
+
+        const pattern = i % 3;
+        const speed = 11 + random() * 12;
+        const turnSpeed = (random() > 0.5 ? 1 : -1) * (0.2 + random() * 0.35);
+        const flapFreq = 4.5 + random() * 2.5;
+        const phase = random() * TAU;
+        const circleCenterX = (pattern === 0) ? (random() > 0.5 ? -TOWER_X + (random() - 0.5) * 80 : TOWER_X + (random() - 0.5) * 80) : 0;
+        const circleCenterZ = (random() - 0.5) * 120;
+        const radius = 50 + random() * 90;
+
+        seagulls.push({
+          mesh,
+          x: startX,
+          y: startY,
+          z: startZ,
+          speed,
+          baseY: startY,
+          pattern,
+          angle: random() * TAU,
+          turnSpeed,
+          flapFreq,
+          phase,
+          circleCenterX,
+          circleCenterZ,
+          radius,
+          seed: i * 3.17 + 1.2
+        });
+      }
+    }
+
+    function updateSeagulls(dt, time) {
+      if (!seagullGroup || !seagulls.length) return;
+      const visible = (state.environment !== 'night' && state.environment !== 'storm') || (state.windstorm && state.windSpeed < 130);
+      seagullGroup.visible = visible;
+      if (!visible) return;
+
+      const targetVec = new THREE.Vector3();
+      for (const gull of seagulls) {
+        const { mesh, pattern, speed, flapFreq, phase, seed } = gull;
+        const { leftWing, rightWing, leftOuter, rightOuter } = mesh.userData;
+
+        let vx = 0, vy = 0, vz = 0;
+        let bank = 0;
+
+        if (!state.reducedMotion) {
+          if (pattern === 0) {
+            gull.angle += gull.turnSpeed * dt;
+            const targetX = gull.circleCenterX + Math.cos(gull.angle) * gull.radius;
+            const targetZ = gull.circleCenterZ + Math.sin(gull.angle) * gull.radius;
+            vx = (targetX - gull.x) * speed * 0.18;
+            vz = (targetZ - gull.z) * speed * 0.18;
+            vy = Math.sin(time * 0.8 + seed) * 1.5;
+            gull.x += vx * dt;
+            gull.z += vz * dt;
+            gull.y = gull.baseY + Math.sin(time * 0.5 + phase) * 8;
+            bank = gull.turnSpeed * 1.1;
+          } else if (pattern === 1) {
+            const dir = gull.turnSpeed > 0 ? 1 : -1;
+            vx = speed * dir;
+            vz = Math.cos(time * 0.4 + seed) * 7;
+            vy = Math.cos(time * 0.6 + seed) * 2;
+            gull.x += vx * dt;
+            gull.z += vz * dt;
+            gull.y = gull.baseY + Math.sin(time * 0.6 + seed) * 4;
+            bank = -vz * 0.04;
+            if (gull.x > WEATHER_X_HALF_WIDTH + 60) gull.x = -WEATHER_X_HALF_WIDTH - 60;
+            if (gull.x < -WEATHER_X_HALF_WIDTH - 60) gull.x = WEATHER_X_HALF_WIDTH + 60;
+          } else {
+            gull.angle += Math.sin(time * 0.3 + seed) * 0.012;
+            vx = Math.cos(gull.angle) * speed;
+            vz = Math.sin(gull.angle) * speed;
+            vy = Math.sin(time * 1.1 + seed) * 0.8;
+            gull.x += vx * dt;
+            gull.z += vz * dt;
+            gull.y = gull.baseY + Math.sin(time * 0.7 + seed) * 5;
+            bank = Math.sin(time * 0.3 + seed) * 0.5;
+            if (Math.abs(gull.x) > WEATHER_X_HALF_WIDTH) gull.x = -gull.x * 0.9;
+            if (Math.abs(gull.z) > 280) gull.z = -gull.z * 0.9;
+          }
+
+          mesh.position.set(gull.x, gull.y, gull.z);
+          if (vx * vx + vy * vy + vz * vz > 0.001) {
+            targetVec.set(gull.x + vx, gull.y + vy, gull.z + vz);
+            mesh.lookAt(targetVec);
+            mesh.rotation.z += bank;
+          }
+        }
+
+        const cycleTime = (time * 0.95 + seed) % 6.0;
+        let flapAngle = 0;
+        if (cycleTime < 2.6) {
+          const flapProgress = Math.sin(time * flapFreq * TAU + phase);
+          flapAngle = flapProgress * 0.42;
+        } else {
+          flapAngle = 0.08 + Math.sin(time * 1.5 + phase) * 0.025;
+        }
+
+        leftWing.rotation.z = flapAngle;
+        rightWing.rotation.z = -flapAngle;
+        leftOuter.rotation.z = flapAngle * 0.35;
+        rightOuter.rotation.z = -flapAngle * 0.35;
       }
     }
 
@@ -2429,15 +2604,7 @@
         if (dustPositions[i] > 500) dustPositions[i] = -500;
       }
       dustPoints.geometry.attributes.position.needsUpdate = true;
-      birdPoints.visible = state.environment === 'morning' || state.environment === 'midday' || state.environment === 'golden';
-      if (!state.reducedMotion) {
-        for (let i = 0; i < birdPositions.length; i += 3) {
-          birdPositions[i] += dt * 2.2;
-          birdPositions[i + 2] += Math.sin(time * 1.8 + i) * dt * .4;
-          if (birdPositions[i] > 20) birdPositions[i] = -350;
-        }
-        birdPoints.geometry.attributes.position.needsUpdate = true;
-      }
+      updateSeagulls(dt, time);
       for (const cloud of cloudBank) {
         cloud.position.x += dt * (2.5 + (state.windstorm ? state.windSpeed * .045 : 0));
         if (cloud.position.x > 560) cloud.position.x = -560;
@@ -3137,9 +3304,12 @@
       materials.laneWhite = makeMaterial('laneWhite', { color: 0xe6ede5, roughness: .60 });
       materials.laneYellow = makeMaterial('laneYellow', { color: 0xf2ce68, roughness: .55 });
       materials.sidewalk = makeMaterial('sidewalk', { color: 0x96a09e, roughness: .78 });
-      materials.expansion = makeMaterial('expansion', { color: 0x283232, roughness: .7, metalness: .3 });
       materials.lampPole = makeMaterial('lampPole', { color: 0x44585a, roughness: .50, metalness: .55 });
       materials.bridgeLight = new THREE.MeshStandardMaterial({ color: 0xffd98d, emissive: 0xffa92f, emissiveIntensity: 1, roughness: .35 });
+      materials.seagullWhite = makeMaterial('seagullWhite', { color: 0xf6f9fa, roughness: 0.55 });
+      materials.seagullGray = makeMaterial('seagullGray', { color: 0xbac7cc, roughness: 0.65 });
+      materials.seagullDark = makeMaterial('seagullDark', { color: 0x22272a, roughness: 0.8 });
+      materials.seagullBeak = makeMaterial('seagullBeak', { color: 0xf5a623, roughness: 0.35, metalness: 0.1 });
       materials.sign = makeMaterial('sign', { color: 0x22585a, roughness: .6 });
       materials.presidio = makeMaterial('presidio', { color: 0x3f6e52, roughness: .92 });
       materials.headland = makeMaterial('headland', { color: 0x4f785e, roughness: .92 });
