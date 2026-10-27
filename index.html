@@ -870,6 +870,26 @@
     const TRUSS_DEPTH = BRIDGE_DIMENSIONS.trussDepthFt * BRIDGE_SCALE;
     const TRUSS_PANEL = BRIDGE_DIMENSIONS.trussPanelFt * BRIDGE_SCALE;
     const TRUSS_Z = DECK_CABLE_ATTACH_Z;
+    // Real tower dimensions (drawing-derived: 5 stepped Art Deco tiers, 4 portals,
+    // below-deck X-bracing, saddle crown at 734 ft, beacon to 746 ft). Units are ft x .1.
+    const TOWER_LEG_Z = 4.5; // leg planes at +/-45 ft, on the cable planes
+    // [baseY, topY, transverseWidthZ, longitudinalDepthX] per tier
+    const TOWER_TIERS = [
+      [4.4, 23.6, 3.30, 5.41],
+      [23.6, 39.7, 2.43, 3.74],
+      [39.7, 52.8, 2.13, 3.18],
+      [52.8, 62.7, 1.77, 2.62],
+      [62.7, 73.4, 1.48, 2.30]
+    ];
+    // [centerY, height, widthZ, depthX] per portal; spans widen as legs step back
+    const TOWER_PORTALS = [
+      [37.7, 3.0, 6.70, 2.3],
+      [50.7, 3.0, 6.99, 2.3],
+      [61.7, 2.2, 7.35, 2.3],
+      [71.6, 2.2, 7.65, 1.6]
+    ];
+    const TOWER_XBANDS = [[4.6, 12.9], [12.9, 22.6]]; // below-deck X-brace panels
+    const TOWER_XBEAMS = [4.6, 12.9, 22.6]; // below-deck horizontal beams
     const FLOOR_BEAM_Y_OFFSET = 1.05;
     const TRUSS_CHORD_THICKNESS = .42;
     const TRUSS_DIAGONAL_THICKNESS = .28;
@@ -1319,9 +1339,6 @@
       shared.barrierGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 2.2, .36);
       shared.poleGeometry = new THREE.CylinderGeometry(.14, .19, 8.5, 8);
       shared.lampGeometry = new THREE.SphereGeometry(.42, 8, 6);
-      shared.towerLegGeometry = new THREE.BoxGeometry(3.3, TOWER_TOP_Y - FOUNDATION_BOTTOM_Y, 2.3);
-      shared.towerCrossGeometry = new THREE.BoxGeometry(4.2, 2.4, 9.3);
-      shared.towerCapGeometry = new THREE.BoxGeometry(4.8, 2.4, 9.6);
       shared.anchorGeometry = new THREE.BoxGeometry(25, 20, 14);
       shared.cableTubeGeometry = null;
       shared.suspenderGeometry = null;
@@ -1505,24 +1522,48 @@
       tower.userData.baseX = x;
       towerGroup.add(tower);
 
-      const legCenterY = (FOUNDATION_BOTTOM_Y + TOWER_TOP_Y) / 2;
-      const leftLeg = createBox(tower, shared.towerLegGeometry, materials.orangeSteel, 0, legCenterY, -3.4);
-      const rightLeg = createBox(tower, shared.towerLegGeometry, materials.orangeSteel, 0, legCenterY, 3.4);
-      leftLeg.castShadow = rightLeg.castShadow = true;
-      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y - 1.2, 0);
-      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y + 25, 0);
-      createBox(tower, shared.towerCrossGeometry, materials.orangeSteel, 0, DECK_Y + 49, 0);
-      createBox(tower, shared.towerCapGeometry, materials.orangeSteel, 0, TOWER_TOP_Y - 1.2, 0);
-      createBox(tower, new THREE.BoxGeometry(4.8, 2.2, 9.2), materials.orangeDark, 0, FOUNDATION_BOTTOM_Y + 1.1, 0);
-
-      const braceMaterial = materials.orangeHot;
-      for (const y of [DECK_Y + 7, DECK_Y + 30, DECK_Y + 48]) {
-        beamBetween(tower, new THREE.Vector3(-1.55, y - 4, -3.05), new THREE.Vector3(-1.55, y + 4, 3.05), .32, braceMaterial);
-        beamBetween(tower, new THREE.Vector3(1.55, y - 4, 3.05), new THREE.Vector3(1.55, y + 4, -3.05), .32, braceMaterial);
+      // Five stepped tiers per leg (Art Deco setbacks); legs on the +/-45 ft planes
+      for (const z of [-TOWER_LEG_Z, TOWER_LEG_Z]) {
+        for (const [baseY, topY, widthZ, depthX] of TOWER_TIERS) {
+          const leg = createBox(tower, new THREE.BoxGeometry(depthX, topY - baseY, widthZ), materials.orangeSteel, 0, (baseY + topY) / 2, z);
+          leg.castShadow = leg.receiveShadow = true;
+        }
+        // Cable saddle housing on each leg crown; the main cables land on these
+        const saddle = createBox(tower, new THREE.BoxGeometry(2.0, 1.3, 1.6), materials.orangeDark, 0, 73.95, z);
+        saddle.castShadow = true;
+        // Stepped beacon plinth + aircraft warning lens (tallest point)
+        createBox(tower, new THREE.BoxGeometry(1.1, .3, 1.2), materials.orangeSteel, 0, 74.75, z);
+        const lens = new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, .3, 8), materials.towerBeacon);
+        lens.position.set(0, 75.05, z);
+        tower.add(lens);
       }
-      for (const z of [-3.4, 3.4]) {
-        createBox(tower, new THREE.BoxGeometry(4.4, 2.2, 2.8), materials.orangeDark, 0, FOUNDATION_BOTTOM_Y + 1.1, z);
-        createBox(tower, new THREE.BoxGeometry(4.8, 1.4, 2.8), materials.orangeSteel, 0, TOWER_TOP_Y - 2.1, z);
+      // Four portals above the deck, spanning the inner leg faces
+      for (const [centerY, height, widthZ, depthX] of TOWER_PORTALS) {
+        const portal = createBox(tower, new THREE.BoxGeometry(depthX, height, widthZ), materials.orangeSteel, 0, centerY, 0);
+        portal.castShadow = portal.receiveShadow = true;
+      }
+      // X-bracing lives below the deck only (two panels + three beam levels)
+      for (const [lo, hi] of TOWER_XBANDS) {
+        for (const px of [-.26, .26]) {
+          beamBetween(tower, new THREE.Vector3(px, lo, -TOWER_LEG_Z), new THREE.Vector3(px, hi, TOWER_LEG_Z), .5, materials.orangeHot);
+          beamBetween(tower, new THREE.Vector3(px, lo, TOWER_LEG_Z), new THREE.Vector3(px, hi, -TOWER_LEG_Z), .5, materials.orangeHot);
+        }
+      }
+      for (const y of TOWER_XBEAMS) {
+        const beam = createBox(tower, new THREE.BoxGeometry(1.7, .55, TOWER_LEG_Z * 2 + 1), materials.orangeSteel, 0, y, 0);
+        beam.castShadow = true;
+      }
+      // Concrete pier + footing; elliptical ship fender on the south (ocean-side) tower
+      const pier = createBox(tower, new THREE.BoxGeometry(14, 15.4, 6.6), materials.anchorageConcrete, 0, -3.3, 0);
+      pier.receiveShadow = true;
+      createBox(tower, new THREE.BoxGeometry(15.5, 3, 7.8), materials.anchorageRoof, 0, -9.5, 0);
+      if (x < 0) {
+        const fenderGeo = new THREE.CylinderGeometry(15, 15, 5, 40, 1, true);
+        fenderGeo.scale(1, 1, .52);
+        const fender = new THREE.Mesh(fenderGeo, materials.anchorageConcrete);
+        fender.position.set(0, .5, 0);
+        fender.receiveShadow = true;
+        tower.add(fender);
       }
       towerReferences.push({ tower, x });
     }
@@ -2601,11 +2642,17 @@
           const rampAngle = Math.atan2(DECK_Y - APPROACH_END_Y, APPROACH_LENGTH);
           addProxyBox(structure, APPROACH_LENGTH, 3.4, DECK_WIDTH, side * (ANCHORAGE_X + APPROACH_LENGTH / 2), (DECK_Y + APPROACH_END_Y) / 2 - 1.2, 0, -side * rampAngle);
         }
-        // Towers: legs, portals, and cap
+        // Towers: stepped tiers, portals, and saddle crowns (match createTower massing)
         for (const side of [-1, 1]) {
           const x = side * TOWER_X;
-          for (const z of [-3.4, 3.4]) addProxyBox(structure, 3.3, TOWER_TOP_Y, 2.3, x, TOWER_TOP_Y / 2, z);
-          for (const y of [DECK_Y - 1.2, DECK_Y + 25, DECK_Y + 49, TOWER_TOP_Y - 1.2]) addProxyBox(structure, 4.4, 2.4, 9.3, x, y, 0);
+          for (const z of [-TOWER_LEG_Z, TOWER_LEG_Z]) {
+            addProxyBox(structure, 5.41, 19.2, 3.3, x, 14.0, z);
+            addProxyBox(structure, 3.74, 16.1, 2.43, x, 31.65, z);
+            addProxyBox(structure, 3.18, 13.1, 2.13, x, 46.25, z);
+            addProxyBox(structure, 2.62, 9.9, 1.77, x, 57.75, z);
+            addProxyBox(structure, 2.3, 10.7, 1.48, x, 68.05, z);
+          }
+          for (const [centerY, height, widthZ, depthX] of TOWER_PORTALS) addProxyBox(structure, depthX, height, widthZ, x, centerY, 0);
         }
         // Main cables follow the same catenary as the exhibit
         for (const side of [-1, 1]) {
@@ -4088,10 +4135,8 @@
         contactShadowGroup = new THREE.Group();
         contactShadowGroup.name = 'Contact shadow discs';
         const spots = [
-          { x: -TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .5 },
-          { x: TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .5 },
-          { x: -ANCHORAGE_X, z: 0, sx: 22, sz: 13, y: 1.2, opacity: .35 },
-          { x: ANCHORAGE_X, z: 0, sx: 22, sz: 13, y: 1.2, opacity: .35 }
+          { x: -TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .3 },
+          { x: TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .3 }
         ];
         for (const spot of spots) {
           const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: spot.opacity, depthWrite: false, fog: false });
@@ -5115,6 +5160,7 @@
       materials.sidewalk = makeMaterial('sidewalk', { color: 0x96a09e, roughness: .78 });
       materials.lampPole = makeMaterial('lampPole', { color: 0x44585a, roughness: .50, metalness: .55 });
       materials.bridgeLight = new THREE.MeshStandardMaterial({ color: 0xffd98d, emissive: 0xffa92f, emissiveIntensity: 1, roughness: .35 });
+      materials.towerBeacon = new THREE.MeshStandardMaterial({ color: 0x7a0f0a, emissive: 0xff2010, emissiveIntensity: 2.4, roughness: .4 });
       materials.seagullWhite = makeMaterial('seagullWhite', { color: 0xf6f9fa, roughness: 0.55 });
       materials.seagullGray = makeMaterial('seagullGray', { color: 0xbac7cc, roughness: 0.65 });
       materials.seagullDark = makeMaterial('seagullDark', { color: 0x22272a, roughness: 0.8 });
