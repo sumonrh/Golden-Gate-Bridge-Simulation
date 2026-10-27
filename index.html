@@ -4660,6 +4660,22 @@
             if (aoPass.updateGtaoMaterial) aoPass.updateGtaoMaterial({ radius: 12, distanceExponent: 1.2, thickness: 1, scale: 1, samples: 16, screenSpaceRadius: false });
             if (typeof aoPass.updatePdMaterial === 'function') aoPass.updatePdMaterial({ lumaPhi: 12, depthPhi: 3, normalPhi: 8, radius: 7, rings: 2, samples: 16 });
             aoPass.blendIntensity = state.quality === 'ultra' ? 1.0 : .7;
+            // Sprites (clouds, fog banks, glows) must not pollute the AO geometry
+            // buffer: they bake in as flat quads and come out as drifting dark sheets
+            const spriteVisibility = [];
+            const baseOverrideVisibility = aoPass.overrideVisibility.bind(aoPass);
+            aoPass.overrideVisibility = () => {
+              baseOverrideVisibility();
+              scene.traverse((object) => {
+                if (object.isSprite) { spriteVisibility.push([object, object.visible]); object.visible = false; }
+              });
+            };
+            const baseRestoreVisibility = aoPass.restoreVisibility.bind(aoPass);
+            aoPass.restoreVisibility = () => {
+              baseRestoreVisibility();
+              for (const [object, wasVisible] of spriteVisibility) object.visible = wasVisible;
+              spriteVisibility.length = 0;
+            };
             composer.addPass(aoPass);
           }
         } catch (aoPassError) { console.warn('GTAO pass disabled', aoPassError); aoPass = null; }
