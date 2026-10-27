@@ -626,7 +626,7 @@
           <details class="panel">
             <summary>Environment</summary>
             <div class="panel-body">
-              <div class="control"><label for="environmentSelect">Time and weather</label><select id="environmentSelect" title="Blend the scene between daylight, night, fog, and storm palettes"><option value="morning" selected>Sunny Morning</option><option value="midday">Bright Midday</option><option value="golden">Golden Hour</option><option value="sunset">Sunset</option><option value="night">Night</option><option value="fog">Coastal Fog</option><option value="storm">Windstorm</option></select></div>
+              <div class="control"><label for="environmentSelect">Time and weather</label><select id="environmentSelect" title="Blend the scene between daylight, night, fog, and storm palettes"><option value="morning">Sunny Morning</option><option value="midday">Bright Midday</option><option value="golden" selected>Golden Hour</option><option value="sunset">Sunset</option><option value="night">Night</option><option value="fog">Coastal Fog</option><option value="storm">Windstorm</option></select></div>
               <div class="control"><div class="control-row"><label for="sunElRange">Time of day — sun height</label><span class="value" id="sunElValue">38°</span></div><input id="sunElRange" type="range" min="-10" max="70" step="1" value="38" title="Override the preset sun height; lower values give long golden-hour shadows"></div>
               <div class="control"><div class="control-row"><label for="sunAzRange">Sun direction</label><span class="value" id="sunAzValue">135°</span></div><input id="sunAzRange" type="range" min="0" max="360" step="1" value="135" title="Override the preset sun compass direction"></div>
               <p class="small-copy">Dragging a sun slider overrides the preset above; picking a preset clears the override.</p>
@@ -662,7 +662,7 @@
           <details class="panel">
             <summary>Camera</summary>
             <div class="panel-body">
-              <div class="control"><label for="presetSelect">Viewpoint preset</label><select id="presetSelect" title="Move smoothly to a named bridge viewpoint"><option value="overview">Full Bridge Overview</option><option value="sf">San Francisco Approach</option><option value="marin">Marin Headlands</option><option value="fort">Fort Point</option><option value="southTower">South Tower</option><option value="northTower">North Tower</option><option value="midspan">Midspan Deck</option><option value="cable">Main Cable Inspection</option><option value="driver">Roadway Driver View (moving)</option><option value="water">Water-Level View</option><option value="skyline">City Skyline</option><option value="bird">Birds-Eye View</option><option value="eqObservation">Earthquake Observation</option><option value="windObservation">Windstorm Observation</option></select></div>
+              <div class="control"><label for="presetSelect">Viewpoint preset</label><select id="presetSelect" title="Move smoothly to a named bridge viewpoint"><option value="hero" selected>Golden Hour Hero</option><option value="overview">Full Bridge Overview</option><option value="sf">San Francisco Approach</option><option value="marin">Marin Headlands</option><option value="fort">Fort Point</option><option value="southTower">South Tower</option><option value="northTower">North Tower</option><option value="midspan">Midspan Deck</option><option value="cable">Main Cable Inspection</option><option value="driver">Roadway Driver View (moving)</option><option value="water">Water-Level View</option><option value="skyline">City Skyline</option><option value="bird">Birds-Eye View</option><option value="eqObservation">Earthquake Observation</option><option value="windObservation">Windstorm Observation</option></select></div>
               <div class="button-row"><button id="cameraResetButton" title="Return to the full bridge overview camera">Reset Camera</button><button id="autorotateButton" title="Toggle slow orbit around the current target">Auto-rotate: Off</button></div>
               <div class="control"><div class="control-row"><label for="cameraShakeRange">Shake intensity</label><span class="value" id="cameraShakeValue">35%</span></div><input id="cameraShakeRange" type="range" min="0" max="100" step="1" value="35"></div>
               <div class="small-copy">Orbit, pan, zoom, touch gestures, and keyboard focus remain available through OrbitControls.</div>
@@ -697,7 +697,7 @@
           <details class="panel">
             <summary>Help and Assumptions</summary>
             <div class="panel-body">
-              <p class="section-note"><strong>Interpretation:</strong> The bridge is scaled at 0.1 scene units per foot from published Golden Gate dimensions: 4,200 ft main span, 1,125 ft side spans, 746 ft towers above water, 220 ft roadway clearance, and a 90 ft deck. The main cables are seated at the 746 ft tower tops; the published 500 ft tower-above-roadway figure is a separate rounded reference datum. The 470 ft main-cable sag is a profile-based modeling assumption. The stiffening truss is modelled as dual 25 ft-deep (7.6 m) Warren trusses with verticals at 50 ft (15.24 m) hanger spacing — top/bottom chords, verticals, alternating diagonals, floor beams at each panel, and top/bottom lateral bracing (bottom X-bracing added 1953-54) — spaced 90 ft apart in the cable planes, with suspenders transferring deck load from floor-beam panel points to the main cables.</p>
+              <p class="section-note"><strong>Interpretation:</strong> The bridge is scaled at 0.1 scene units per foot from published Golden Gate dimensions: 4,200 ft main span, 1,125 ft side spans, 746 ft towers above water, 220 ft roadway clearance, and a 90 ft deck. The main cables are seated at the 746 ft tower tops; the published 500 ft tower-above-roadway figure is a separate rounded reference datum. The 470 ft main-cable sag is a profile-based modeling assumption. The stiffening truss is modelled as dual 25 ft-deep (7.6 m) Warren trusses with verticals at 50 ft (15.24 m) hanger spacing — top/bottom chords, verticals, alternating diagonals, floor beams at each panel, and top/bottom lateral bracing (bottom X-bracing added 1953-54) — spaced 90 ft apart in the cable planes, with suspenders transferring deck load from floor-beam panel points to the main cables. The south (city) approach includes the Fort Point Arch: a two-hinged steel arch 319 ft 7 in. between bearings with a 113 ft rise, four ribs (inner pair 42 ft 6 in. apart, outer ribs 30 ft outside), and a roadway 185 ft above its springing line (Report of the Chief Engineer, 1937).</p>
               <p class="small-copy">Hazards are deterministic teaching aids. Displayed deformation is not measured performance. The model includes below-water tower foundations but omits soil-structure interaction, aeroelastic stability, detailed traffic rules, local bathymetry, and certified material properties.</p>
               <p class="small-copy">Keyboard: <span class="kbd">Tab</span> focus controls, <span class="kbd">Enter</span> activate, <span class="kbd">R</span> reset camera, <span class="kbd">Space</span> pause traffic.</p>
             </div>
@@ -784,8 +784,10 @@
 
     let THREE;
     let OrbitControls;
-    let Sky = null, RoomEnvironment = null;
-    let EffectComposer = null, RenderPass = null, UnrealBloomPass = null, OutputPass = null;
+    let Sky = null;
+    let EffectComposer = null, RenderPass = null, UnrealBloomPass = null, OutputPass = null, ShaderPass = null;
+    let GTAOPass = null;
+    let mergeGeometries = null;
     let skyAvailable = false, postAvailable = false;
 
     try {
@@ -794,16 +796,22 @@
       ({ OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
       try {
         ({ Sky } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/objects/Sky.js'));
-        ({ RoomEnvironment } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/environments/RoomEnvironment.js'));
-        skyAvailable = !!(Sky && RoomEnvironment);
-      } catch (addonError) { console.warn('Sky/environment addons unavailable, using classic backdrop', addonError); }
+        skyAvailable = !!Sky;
+      } catch (addonError) { console.warn('Sky/environment addon unavailable, using classic backdrop', addonError); }
       try {
         ({ EffectComposer } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'));
         ({ RenderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'));
         ({ UnrealBloomPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js'));
         ({ OutputPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/OutputPass.js'));
-        postAvailable = !!(EffectComposer && RenderPass && UnrealBloomPass && OutputPass);
+        ({ ShaderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/ShaderPass.js'));
+        postAvailable = !!(EffectComposer && RenderPass && UnrealBloomPass && OutputPass && ShaderPass);
       } catch (postError) { console.warn('Post-processing addons unavailable, using direct rendering', postError); }
+      try {
+        ({ GTAOPass } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/GTAOPass.js'));
+      } catch (aoError) { console.warn('GTAO addon unavailable, using contact shadows only', aoError); GTAOPass = null; }
+      try {
+        ({ mergeGeometries } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js'));
+      } catch (mergeError) { console.warn('Geometry batching unavailable', mergeError); }
       setLoading('Generating towers, cables, and the bay...');
     } catch (error) {
       setLoading('The Three.js module could not be loaded. Start a local web server and check network access.');
@@ -835,7 +843,12 @@
       cableSpacingFt: 82,
       trussDepthFt: 25,
       floorBeamDepthFt: 8.5,
-      trussPanelFt: 50
+      trussPanelFt: 50,
+      fortPointArchSpanFt: 319 + 7 / 12,
+      fortPointArchRiseFt: 113,
+      fortPointArchDeckAboveSpringingFt: 185,
+      fortPointArchInnerRibSpacingFt: 42.5,
+      fortPointArchOuterRibOffsetFt: 30
     });
     const MAIN_SPAN = BRIDGE_DIMENSIONS.mainSpanFt * BRIDGE_SCALE;
     const SIDE_SPAN = BRIDGE_DIMENSIONS.sideSpanFt * BRIDGE_SCALE;
@@ -861,11 +874,33 @@
     const TRUSS_CHORD_THICKNESS = .42;
     const TRUSS_DIAGONAL_THICKNESS = .28;
     const ANCHORAGE_CABLE_Y = DECK_Y + 4;
-    const APPROACH_END_Y = 7;
+    const APPROACH_END_Y = 16;
     const APPROACH_LENGTH = BRIDGE_HALF_LENGTH - ANCHORAGE_X;
-    const APPROACH_CENTER_X = (BRIDGE_HALF_LENGTH + ANCHORAGE_X) / 2;
-    const APPROACH_CENTER_Y = (DECK_Y + APPROACH_END_Y) / 2;
-    const APPROACH_ROTATION = Math.atan2(DECK_Y - APPROACH_END_Y, APPROACH_LENGTH);
+    // Eased approach profile (see retrofit elevation schematic): level tangent at the
+    // suspension line so the deck runs out with no kink, then a gentle quadratic fall
+    // to APPROACH_END_Y at the toe. All approach geometry keys off these helpers.
+    const approachS = (x) => clamp((Math.abs(x) - ANCHORAGE_X) / APPROACH_LENGTH, 0, 1);
+    const approachCenterY = (x) => DECK_Y - (DECK_Y - APPROACH_END_Y) * approachS(x) ** 2;
+    const approachAngle = (x) => (x < 0 ? 1 : -1) * Math.atan(2 * (DECK_Y - APPROACH_END_Y) * approachS(x) / APPROACH_LENGTH);
+    // Grade under the approaches: natural grade, buried anchorage caps, and grassed
+    // embankment banks that rise to meet the road at each toe.
+    const approachGroundY = (x) => {
+      const ax = Math.abs(x);
+      if (ax >= ANCHORAGE_X - 4 && ax <= ANCHORAGE_X + 32) return 2;
+      if (ax >= 400) return Math.min(3 + ((ax - 400) / 52) * 10.2, 13.4);
+      return 1.5;
+    };
+    const DECK_TOP_OFFSET = .85; // grey wearing-surface top, flush with the approach slabs
+    const APPROACH_TOP_OFFSET = .844;
+    // Fort Point Arch: 319 ft 7 in. between bearings, 113 ft rise, roadway 185 ft above
+    // the springing line (Report of the Chief Engineer, 1937). It sits just north of the
+    // south anchorage housing, with the south bearing at that housing's north face.
+    const FORT_POINT_ARCH_SPAN = BRIDGE_DIMENSIONS.fortPointArchSpanFt * BRIDGE_SCALE;
+    const FORT_POINT_ARCH_RISE = BRIDGE_DIMENSIONS.fortPointArchRiseFt * BRIDGE_SCALE;
+    const FORT_POINT_ARCH_SPRING_Y = DECK_Y - BRIDGE_DIMENSIONS.fortPointArchDeckAboveSpringingFt * BRIDGE_SCALE;
+    const FORT_POINT_ARCH_SOUTH_X = SUSPENSION_START + 31; // south bearing sits just north of the buried SF anchorage block
+    const FORT_POINT_ARCH_NORTH_X = FORT_POINT_ARCH_SOUTH_X + FORT_POINT_ARCH_SPAN;
+    const FORT_POINT_ARCH_CENTER_X = (FORT_POINT_ARCH_SOUTH_X + FORT_POINT_ARCH_NORTH_X) / 2;
     const CABLE_STEP = 5;
     const CABLE_POINT_COUNT = Math.round(SUSPENSION_LENGTH / CABLE_STEP) + 1;
     const DECK_SEGMENT_STEP = 10;
@@ -878,15 +913,15 @@
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const defaults = {
-      environment: 'morning', earthquake: false, windstorm: false,
+      environment: 'golden', earthquake: false, windstorm: false,
       pga: 0.30, eqDuration: 18, damping: 0.18, eqFrequency: 'mixed', eqDirection: 'combined', seed: 17,
       windSpeed: 70, windDirection: 90, gust: 35, turbulence: 22, windDuration: 30, stormFog: 22,
       rain: false, eqCameraShake: true, windCameraShake: true, restriction: true,
       trafficDensity: 55, trafficSpeed: 65, trafficPaused: false, incident: false,
       deformationScale: 10, overlay: true, vectors: true, lightning: true,
       reducedMotion: prefersReducedMotion, disableFlashing: prefersReducedMotion,
-      cameraShakeIntensity: 35, autorotate: false, quality: 'high', preStormEnvironment: 'morning',
-      bloom: false, bloomStrength: 1, exposure: 40, skyOn: true,
+      cameraShakeIntensity: 35, autorotate: false, quality: 'high', preStormEnvironment: 'golden',
+      bloom: true, bloomStrength: 25, exposure: 55, skyOn: true,
       sunElOverride: null, sunAzOverride: null,
       masterVolume: 35, windVolume: 35, trafficVolume: 30, hazardVolume: 40, ambientVolume: 25,
       realisticPhysics: true
@@ -895,20 +930,27 @@
 
     let renderer, scene, camera, controls;
     let sunLight, hemiLight, fillLight, ambientLight;
-    let composer = null, bloomPass = null, composerReady = false;
-    let skyMesh = null, starPoints = null;
+    let aoPass = null;
+    let floodLights = [], floodCones = [], lampPoolMesh = null, cityGlowSprite = null, contactShadowGroup = null;
+    const weatherBase = new Map();
+    let composer = null, bloomPass = null, gradePass = null, composerReady = false;
+    let mainRenderCalls = 0, mainRenderTriangles = 0;
+    let skyMesh = null, starPoints = null, sunGlow = null;
+    let environmentTarget = null, envMapDirty = false, envMapRebuildAt = 0;
     const sunDir = new THREE.Vector3(-0.45, 0.65, 0.35).normalize();
     const targetSunDir = new THREE.Vector3().copy(sunDir);
     let bridgeGroup, towerGroup, environmentGroup, waterGroup, trafficGroup, weatherGroup, overlayGroup;
     let waterMesh, waterMaterial;
     let waterUniforms;
-    let deckSegments = [], cableLines = [], cableTubes = [], suspenders = [];
-    let trussGroup, trussMembers = [];
+    let deckBatches = [], cableLines = [], cableTubes = [], suspenders = [];
+    let trussGroup, trussMembers = [], trussBatches = [];
+    let reflectionRT = null, reflectionScene = null, reflectionSky = null, reflectionProxy = null;
+    let reflectionFrame = 0;
     let deckCenterLine, deckNodes, displacementVectors;
     let towerReferences = [];
     let rainPoints, rainPositions, dustPoints, dustPositions;
     let seagullGroup, seagulls = [];
-    let cloudBank = [], boats = [];
+    let cloudBank = [], marineFogBank = [], boats = [];
     let vehicles = [];
     let vehicleSerial = 0;
     let driverCar = null;
@@ -969,9 +1011,9 @@
     function beamBetween(parent, start, end, thickness, material) {
       const vector = new THREE.Vector3().subVectors(end, start);
       const length = vector.length();
-      const mesh = new THREE.Mesh(shared.beamGeometry || (shared.beamGeometry = new THREE.BoxGeometry(1, thickness, thickness)), material);
+      const mesh = new THREE.Mesh(shared.beamGeometry || (shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1)), material);
       mesh.position.copy(start).add(end).multiplyScalar(.5);
-      mesh.scale.set(length, 1, 1);
+      mesh.scale.set(length, thickness, thickness);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -1044,6 +1086,118 @@
       detailGround(materials.asphalt, '#2e383d', ['#242c30', '#3a4449', '#1e2427'], 6, 20, .25);
       detailGround(materials.lotGray, '#8f938e', ['#7d817c', '#a2a6a1'], 4, 21, .2);
       detailGround(materials.retaining, '#869088', ['#767f78', '#98a29a'], 6, 22, .3);
+    }
+
+    // Package B: procedural weathering — vertical grime streaks for painted steel,
+    // formwork blotches for concrete; used as roughness + bump variation
+    function steelWeatherCanvas(seed = 31) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#6e6e6e';
+      ctx.fillRect(0, 0, size, size);
+      const random = seeded(seed);
+      for (let i = 0; i < 90; i += 1) { // vertical rain-washed streaks (smoother = darker)
+        const x = random() * size, w = 2 + random() * 9, h = 40 + random() * 216;
+        const y = random() * (size - h);
+        const gradient = ctx.createLinearGradient(0, y, 0, y + h);
+        gradient.addColorStop(0, 'rgba(40,40,40,0)');
+        gradient.addColorStop(.5, `rgba(40,40,40,${.10 + random() * .22})`);
+        gradient.addColorStop(1, 'rgba(40,40,40,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, w, h);
+      }
+      for (let i = 0; i < 260; i += 1) { // rough salt/patch variation (brighter)
+        ctx.fillStyle = `rgba(190,190,190,${.05 + random() * .14})`;
+        ctx.beginPath();
+        ctx.arc(random() * size, random() * size, 1 + random() * 6, 0, TAU);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(60,60,60,.25)'; // faint horizontal panel banding
+      for (let y = 32; y < size; y += 64) ctx.fillRect(0, y, size, 2);
+      return canvas;
+    }
+
+    function concreteWeatherCanvas(seed = 47) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#8a8a8a';
+      ctx.fillRect(0, 0, size, size);
+      const random = seeded(seed);
+      for (let i = 0; i < 120; i += 1) { // weather blotches
+        ctx.fillStyle = random() > .5 ? `rgba(60,60,60,${.06 + random() * .16})` : `rgba(200,200,200,${.05 + random() * .12})`;
+        ctx.beginPath();
+        ctx.arc(random() * size, random() * size, 4 + random() * 22, 0, TAU);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(70,70,70,.20)'; // formwork seams
+      for (let y = 0; y < size; y += 42) ctx.fillRect(0, y, size, 2);
+      for (let x = 0; x < size; x += 86) ctx.fillRect(x, 0, 2, size);
+      for (let i = 0; i < 40; i += 1) { // drip stains running down
+        const x = random() * size;
+        ctx.fillStyle = `rgba(55,55,55,${.08 + random() * .15})`;
+        ctx.fillRect(x, random() * size * .4, 1.5 + random() * 2.5, 30 + random() * 90);
+      }
+      return canvas;
+    }
+
+    function applyStructureWeathering() {
+      try {
+        const steelTex = new THREE.CanvasTexture(steelWeatherCanvas(31));
+        steelTex.wrapS = steelTex.wrapT = THREE.RepeatWrapping;
+        steelTex.repeat.set(2, 2);
+        const concreteTex = new THREE.CanvasTexture(concreteWeatherCanvas(47));
+        concreteTex.wrapS = concreteTex.wrapT = THREE.RepeatWrapping;
+        concreteTex.repeat.set(2, 2);
+        const steelMats = ['orangeSteel', 'orangeDark', 'orangeHot', 'cable', 'lampPole'];
+        const concreteMats = ['anchorageConcrete', 'anchorageRoof', 'retaining', 'pier', 'fort'];
+        for (const name of steelMats) {
+          const material = materials[name];
+          if (!material || !material.isMeshStandardMaterial) continue;
+          weatherBase.set(material, { roughness: material.roughness, metalness: material.metalness, env: material.envMapIntensity ?? .55 });
+          material.roughnessMap = steelTex;
+          material.bumpMap = steelTex;
+          material.bumpScale = .12;
+          material.needsUpdate = true;
+        }
+        for (const name of concreteMats) {
+          const material = materials[name];
+          if (!material || !material.isMeshStandardMaterial) continue;
+          weatherBase.set(material, { roughness: material.roughness, metalness: material.metalness, env: material.envMapIntensity ?? .55 });
+          material.roughnessMap = concreteTex;
+          material.bumpMap = concreteTex;
+          material.bumpScale = .3;
+          material.needsUpdate = true;
+        }
+        // Clamp very low roughness so chrome never throws specular fireflies
+        if (materials.chrome && materials.chrome.isMeshStandardMaterial) {
+          weatherBase.set(materials.chrome, { roughness: materials.chrome.roughness, metalness: materials.chrome.metalness, env: materials.chrome.envMapIntensity ?? .55 });
+          materials.chrome.roughness = Math.max(.22, materials.chrome.roughness);
+        }
+        if (materials.asphalt && materials.asphalt.isMeshStandardMaterial) {
+          weatherBase.set(materials.asphalt, { roughness: materials.asphalt.roughness, metalness: materials.asphalt.metalness, env: materials.asphalt.envMapIntensity ?? .55, color: materials.asphalt.color.clone() });
+        }
+      } catch (weatherError) { console.warn('Structure weathering skipped', weatherError); }
+    }
+
+    // Storm wet sheen: darker, smoother, more reflective when soaked
+    function updateWetResponse(wet, blend) {
+      if (!weatherBase.size) return;
+      for (const [material, base] of weatherBase) {
+        if (!material || !material.isMeshStandardMaterial) continue;
+        const steel = base.metalness >= .2;
+        const targetRough = Math.max(.18, base.roughness - wet * (steel ? .14 : .30));
+        const targetEnv = base.env + wet * .6;
+        material.roughness = lerp(material.roughness, targetRough, blend);
+        material.envMapIntensity = lerp(material.envMapIntensity, targetEnv, blend);
+        if (base.color) {
+          const darkened = base.color.clone().multiplyScalar(1 - wet * .18);
+          material.color.lerp(darkened, blend);
+        }
+      }
     }
 
     function textSign(lines, w = 512, h = 160) {
@@ -1158,6 +1312,7 @@
       bridgeGroup.add(towerGroup);
 
       shared.deckGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 1.35, DECK_WIDTH);
+      shared.roadGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .18, DECK_WIDTH - 2.4);
       shared.trussGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 1.2, 1.1);
       shared.laneGeometry = new THREE.BoxGeometry(6.5, .06, .12);
       shared.sidewalkGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .42, 1.2);
@@ -1171,34 +1326,52 @@
       shared.cableTubeGeometry = null;
       shared.suspenderGeometry = null;
 
-      for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += DECK_SEGMENT_STEP) {
-        const segment = createBox(bridgeGroup, shared.deckGeometry, materials.orangeSteel, x, DECK_Y, 0);
-        segment.userData.centerX = x; segment.userData.baseZ = 0; segment.userData.baseY = 0;
-        deckSegments.push(segment);
-        const sidewalkA = createBox(bridgeGroup, shared.sidewalkGeometry, materials.sidewalk, x, DECK_Y + 1.05, -(DECK_WIDTH / 2 - .6));
-        const sidewalkB = createBox(bridgeGroup, shared.sidewalkGeometry, materials.sidewalk, x, DECK_Y + 1.05, DECK_WIDTH / 2 - .6);
-        sidewalkA.userData.centerX = x; sidewalkA.userData.baseZ = -(DECK_WIDTH / 2 - .6); sidewalkA.userData.baseY = 1.05; sidewalkA.userData.sidewalk = true;
-        sidewalkB.userData.centerX = x; sidewalkB.userData.baseZ = DECK_WIDTH / 2 - .6; sidewalkB.userData.baseY = 1.05; sidewalkB.userData.sidewalk = true;
-        const barrierA = createBox(bridgeGroup, shared.barrierGeometry, materials.orangeSteel, x, DECK_Y + 1.7, -(DECK_WIDTH / 2 - .25));
-        const barrierB = createBox(bridgeGroup, shared.barrierGeometry, materials.orangeSteel, x, DECK_Y + 1.7, DECK_WIDTH / 2 - .25);
-        barrierA.userData.centerX = x; barrierA.userData.baseZ = -(DECK_WIDTH / 2 - .25); barrierA.userData.baseY = 1.7;
-        barrierB.userData.centerX = x; barrierB.userData.baseZ = DECK_WIDTH / 2 - .25; barrierB.userData.baseY = 1.7;
+      function addDeckBatch(geometry, material, items, name, castShadow = true) {
+        const mesh = new THREE.InstancedMesh(geometry, material, items.length);
+        mesh.name = name;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.castShadow = castShadow;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false;
+        items.forEach((item, index) => { item.index = index; });
+        bridgeGroup.add(mesh);
+        deckBatches.push({ mesh, items });
+        return mesh;
       }
-      createStiffeningTruss();
 
-      for (const [index, z] of [-2.7, -.9, .9, 2.7].entries()) {
-        for (let x = SUSPENSION_START + 8; x <= SUSPENSION_END - 8; x += 15) {
-          const stripe = createBox(bridgeGroup, shared.laneGeometry, index === 1 ? materials.laneYellow : materials.laneWhite, x, DECK_Y + .72, z);
-          stripe.userData.centerX = x; stripe.userData.baseZ = z; stripe.userData.baseY = .72;
+      const deckItems = [], roadItems = [], sidewalkItems = [], barrierItems = [];
+      for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += DECK_SEGMENT_STEP) {
+        deckItems.push({ centerX: x, baseZ: 0, baseY: 0 });
+        roadItems.push({ centerX: x, baseZ: 0, baseY: .76 });
+        for (const side of [-1, 1]) {
+          sidewalkItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .6), baseY: 1.05 });
+          barrierItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .25), baseY: 1.7 });
         }
       }
+      addDeckBatch(shared.deckGeometry, materials.orangeSteel, deckItems, 'Instanced deck segments');
+      addDeckBatch(shared.roadGeometry, materials.roadSurface, roadItems, 'Instanced wearing surface');
+      addDeckBatch(shared.sidewalkGeometry, materials.sidewalk, sidewalkItems, 'Instanced sidewalks');
+      addDeckBatch(shared.barrierGeometry, materials.orangeSteel, barrierItems, 'Instanced barriers');
+      createStiffeningTruss();
+
+      const whiteStripeItems = [], yellowStripeItems = [];
+      for (const [index, z] of [-2.7, -.9, .9, 2.7].entries()) {
+        for (let x = SUSPENSION_START + 8; x <= SUSPENSION_END - 8; x += 15) {
+          const item = { centerX: x, baseZ: z, baseY: .88 };
+          if (index === 1) yellowStripeItems.push(item); else whiteStripeItems.push(item);
+        }
+      }
+      addDeckBatch(shared.laneGeometry, materials.laneWhite, whiteStripeItems, 'Instanced white lane markings');
+      addDeckBatch(shared.laneGeometry, materials.laneYellow, yellowStripeItems, 'Instanced yellow lane markings');
 
       [-TOWER_X, TOWER_X].forEach((x) => createTower(x));
       createAnchorages();
+      createFortPointArch();
       createMainCables();
       createRoadLighting();
       createBridgeSigns();
       createStructuralOverlay();
+      updateDeckGeometry(currentResponse);
     }
 
     function createStiffeningTruss() {
@@ -1206,6 +1379,7 @@
       trussGroup.name = 'Stiffening truss (Warren with verticals, 25 ft deep)';
       bridgeGroup.add(trussGroup);
       trussMembers = [];
+      trussBatches = [];
       if (!shared.beamGeometry) shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1);
       const panelCount = Math.round(SUSPENSION_LENGTH / TRUSS_PANEL);
       const chordThickness = TRUSS_CHORD_THICKNESS;
@@ -1218,74 +1392,55 @@
         const top = getDeckPoint(x, z, currentResponse);
         return new THREE.Vector3(top.x, top.y - TRUSS_DEPTH, top.z);
       };
+      const specs = [];
       for (let index = 0; index < panelCount; index += 1) {
         const x0 = SUSPENSION_START + index * TRUSS_PANEL;
         const x1 = x0 + TRUSS_PANEL;
         if (x1 > SUSPENSION_END + 0.001) break;
         for (const side of [-1, 1]) {
           const z = side * TRUSS_Z;
-          const topStart = getTop(x0, z);
-          const topEnd = getTop(x1, z);
-          const bottomStart = getBottom(x0, z);
-          const bottomEnd = getBottom(x1, z);
-          const topChord = beamBetween(trussGroup, topStart, topEnd, chordThickness, materials.orangeSteel);
-          trussMembers.push({ mesh: topChord, kind: 'topChord', side, x0, x1, z });
-          const bottomChord = beamBetween(trussGroup, bottomStart, bottomEnd, chordThickness, materials.orangeDark);
-          trussMembers.push({ mesh: bottomChord, kind: 'bottomChord', side, x0, x1, z });
-          const vertStart = getTop(x0, z);
-          const vertEnd = getBottom(x0, z);
-          if (index === 0 || true) {
-            const vertical = beamBetween(trussGroup, vertStart, vertEnd, verticalThickness, materials.orangeSteel);
-            trussMembers.push({ mesh: vertical, kind: 'vertical', side, x0, z });
-          }
-          if (index === panelCount - 1) {
-            const vertLast = beamBetween(trussGroup, getTop(x1, z), getBottom(x1, z), verticalThickness, materials.orangeSteel);
-            trussMembers.push({ mesh: vertLast, kind: 'vertical', side, x0: x1, z });
-          }
-          const diagStart = (index % 2 === 0) ? bottomStart : topStart;
-          const diagEnd = (index % 2 === 0) ? topEnd : bottomEnd;
-          const diagonal = beamBetween(trussGroup, diagStart, diagEnd, diagThickness, materials.orangeHot);
-          trussMembers.push({ mesh: diagonal, kind: 'diagonal', side, x0, x1, z, index });
+          specs.push({ kind: 'topChord', side, x0, x1, z, thickness: chordThickness, material: materials.orangeSteel });
+          specs.push({ kind: 'bottomChord', side, x0, x1, z, thickness: chordThickness, material: materials.orangeDark });
+          specs.push({ kind: 'vertical', side, x0, z, thickness: verticalThickness, material: materials.orangeSteel });
+          if (index === panelCount - 1) specs.push({ kind: 'vertical', side, x0: x1, z, thickness: verticalThickness, material: materials.orangeSteel });
+          specs.push({ kind: 'diagonal', side, x0, x1, z, index, thickness: diagThickness, material: materials.orangeHot });
         }
-        const floorStart = getTop(x0, -TRUSS_Z);
-        const floorEnd = getTop(x0, TRUSS_Z);
-        const floorBeam = beamBetween(trussGroup, floorStart, floorEnd, floorBeamThickness, materials.orangeDark);
-        trussMembers.push({ mesh: floorBeam, kind: 'floorBeam', x0 });
-        if (index === panelCount - 1) {
-          const lastFloor = beamBetween(trussGroup, getTop(x1, -TRUSS_Z), getTop(x1, TRUSS_Z), floorBeamThickness, materials.orangeDark);
-          trussMembers.push({ mesh: lastFloor, kind: 'floorBeam', x0: x1 });
-        }
+        specs.push({ kind: 'floorBeam', x0, thickness: floorBeamThickness, material: materials.orangeDark });
+        if (index === panelCount - 1) specs.push({ kind: 'floorBeam', x0: x1, thickness: floorBeamThickness, material: materials.orangeDark });
         if (index % 2 === 0) {
-          const b1 = getBottom(x0, -TRUSS_Z);
-          const b2 = getBottom(x1, TRUSS_Z);
-          const b3 = getBottom(x0, TRUSS_Z);
-          const b4 = getBottom(x1, -TRUSS_Z);
           const useCross = index % 4 === 0;
           if (useCross) {
-            const latA = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
-            trussMembers.push({ mesh: latA, kind: 'bottomLateral', x0, x1 });
-            const latB = beamBetween(trussGroup, b3, b4, lateralThickness, materials.orangeHot);
-            trussMembers.push({ mesh: latB, kind: 'bottomLateral', x0, x1 });
+            specs.push({ kind: 'bottomLateral', x0, x1, thickness: lateralThickness, material: materials.orangeHot });
+            specs.push({ kind: 'bottomLateral', x0, x1, thickness: lateralThickness, material: materials.orangeHot });
           } else {
-            const lat = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
-            trussMembers.push({ mesh: lat, kind: 'bottomLateral', x0, x1 });
+            specs.push({ kind: 'bottomLateral', x0, x1, thickness: lateralThickness, material: materials.orangeHot });
           }
-          const t1 = getTop(x0, -TRUSS_Z);
-          const t2 = getTop(x1, TRUSS_Z);
-          const topLat = beamBetween(trussGroup, t1, t2, .22, materials.orangeDark);
-          topLat.material.transparent = true; topLat.material.opacity = .45;
-          trussMembers.push({ mesh: topLat, kind: 'topLateral', x0, x1 });
+          specs.push({ kind: 'topLateral', x0, x1, thickness: .22, material: materials.trussLateral });
         } else {
-          const b1 = getBottom(x0, TRUSS_Z);
-          const b2 = getBottom(x1, -TRUSS_Z);
-          const lat = beamBetween(trussGroup, b1, b2, lateralThickness, materials.orangeHot);
-          trussMembers.push({ mesh: lat, kind: 'bottomLateral', x0, x1 });
-          const t1 = getTop(x0, TRUSS_Z);
-          const t2 = getTop(x1, -TRUSS_Z);
-          const topLat = beamBetween(trussGroup, t1, t2, .22, materials.orangeDark);
-          topLat.material.transparent = true; topLat.material.opacity = .45;
-          trussMembers.push({ mesh: topLat, kind: 'topLateral', x0, x1 });
+          specs.push({ kind: 'bottomLateral', x0, x1, thickness: lateralThickness, material: materials.orangeHot });
+          specs.push({ kind: 'topLateral', x0, x1, thickness: .22, material: materials.trussLateral });
         }
+      }
+      const groups = new Map();
+      for (const spec of specs) {
+        const key = spec.material.uuid;
+        if (!groups.has(key)) groups.set(key, { material: spec.material, specs: [] });
+        groups.get(key).specs.push(spec);
+      }
+      for (const group of groups.values()) {
+        const instanced = new THREE.InstancedMesh(shared.beamGeometry, group.material, group.specs.length);
+        instanced.name = `Instanced truss - ${group.material.name || 'members'}`;
+        instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        instanced.castShadow = group.material !== materials.trussLateral;
+        instanced.receiveShadow = true;
+        instanced.frustumCulled = false;
+        trussGroup.add(instanced);
+        trussBatches.push({ mesh: instanced });
+        group.specs.forEach((spec, instanceIndex) => {
+          spec.batch = instanced;
+          spec.instanceIndex = instanceIndex;
+          trussMembers.push(spec);
+        });
       }
       trussGroup.userData.panelCount = panelCount;
     }
@@ -1297,43 +1452,50 @@
         const top = getDeckPoint(x, z, response);
         return new THREE.Vector3(top.x, top.y - TRUSS_DEPTH, top.z);
       };
-      const tmpStart = new THREE.Vector3();
       const tmpDir = new THREE.Vector3();
-      function placeBeam(mesh, start, end) {
+      const tmpPos = new THREE.Vector3();
+      const tmpQuat = new THREE.Quaternion();
+      const tmpScale = new THREE.Vector3();
+      const tmpMatrix = new THREE.Matrix4();
+      const axis = new THREE.Vector3(1, 0, 0);
+      function placeBeam(item, start, end) {
         const vector = tmpDir.subVectors(end, start);
         const length = vector.length();
         if (length < 0.001) return;
-        mesh.position.copy(tmpStart.copy(start).add(end).multiplyScalar(.5));
-        mesh.scale.set(length, 1, 1);
-        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
+        tmpPos.copy(start).add(end).multiplyScalar(.5);
+        tmpQuat.setFromUnitVectors(axis, vector.normalize());
+        tmpScale.set(length, item.thickness, item.thickness);
+        tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+        item.batch.setMatrixAt(item.instanceIndex, tmpMatrix);
       }
       let bottomLateralCounter = 0;
       for (const item of trussMembers) {
-        const { mesh, kind, side, x0, x1, z } = item;
-        if (kind === 'topChord') placeBeam(mesh, getTop(x0, z), getTop(x1, z));
-        else if (kind === 'bottomChord') placeBeam(mesh, getBottom(x0, z), getBottom(x1, z));
-        else if (kind === 'vertical') placeBeam(mesh, getTop(x0, z), getBottom(x0, z));
+        const { kind, side, x0, x1, z } = item;
+        if (kind === 'topChord') placeBeam(item, getTop(x0, z), getTop(x1, z));
+        else if (kind === 'bottomChord') placeBeam(item, getBottom(x0, z), getBottom(x1, z));
+        else if (kind === 'vertical') placeBeam(item, getTop(x0, z), getBottom(x0, z));
         else if (kind === 'diagonal') {
-          if (item.index % 2 === 0) placeBeam(mesh, getBottom(x0, z), getTop(x1, z));
-          else placeBeam(mesh, getTop(x0, z), getBottom(x1, z));
-        } else if (kind === 'floorBeam') placeBeam(mesh, getTop(x0, -TRUSS_Z), getTop(x0, TRUSS_Z));
+          if (item.index % 2 === 0) placeBeam(item, getBottom(x0, z), getTop(x1, z));
+          else placeBeam(item, getTop(x0, z), getBottom(x1, z));
+        } else if (kind === 'floorBeam') placeBeam(item, getTop(x0, -TRUSS_Z), getTop(x0, TRUSS_Z));
         else if (kind === 'bottomLateral') {
           const idx = Math.round((x0 - SUSPENSION_START) / TRUSS_PANEL);
           const isCrossPanel = idx % 4 === 0;
           if (isCrossPanel) {
-            if (bottomLateralCounter % 2 === 0) placeBeam(mesh, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
-            else placeBeam(mesh, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
+            if (bottomLateralCounter % 2 === 0) placeBeam(item, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
+            else placeBeam(item, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
             bottomLateralCounter += 1;
           } else {
-            if (idx % 2 === 0) placeBeam(mesh, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
-            else placeBeam(mesh, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
+            if (idx % 2 === 0) placeBeam(item, getBottom(x0, -TRUSS_Z), getBottom(x1, TRUSS_Z));
+            else placeBeam(item, getBottom(x0, TRUSS_Z), getBottom(x1, -TRUSS_Z));
           }
         } else if (kind === 'topLateral') {
           const idx = Math.round((x0 - SUSPENSION_START) / TRUSS_PANEL);
-          if (idx % 2 === 0) placeBeam(mesh, getTop(x0, -TRUSS_Z), getTop(x1, TRUSS_Z));
-          else placeBeam(mesh, getTop(x0, TRUSS_Z), getTop(x1, -TRUSS_Z));
+          if (idx % 2 === 0) placeBeam(item, getTop(x0, -TRUSS_Z), getTop(x1, TRUSS_Z));
+          else placeBeam(item, getTop(x0, TRUSS_Z), getTop(x1, -TRUSS_Z));
         }
       }
+      for (const batch of trussBatches) batch.mesh.instanceMatrix.needsUpdate = true;
     }
 
     function createTower(x) {
@@ -1366,32 +1528,111 @@
     }
 
     function createAnchorages() {
-      // Real GGB: massive gravity anchorage ~20k m3, 530 MN, three interlocking concrete blocks below deck
-      // Previously showed as orange cubes over the deck — now modelled below deck as concrete mass with splay housing
+      // Real GGB anchorages are buried gravity blocks (~20k m3, 530 MN). They sit
+      // back from the suspension line with only low concrete showing — never a big
+      // block beside the Fort Point Arch. The side span runs open to the arch and
+      // the approach continues on steel trestle bents (see createApproachViaducts).
       for (const x of [SUSPENSION_START, SUSPENSION_END]) {
         const group = new THREE.Group();
         group.name = x < 0 ? 'San Francisco anchorage' : 'Marin anchorage';
         const direction = x < 0 ? 1 : -1;
-        // Main gravity block below deck (concrete) - bulk of the 182,000 yd3 for anchorages/pylons/housing
-        createBox(group, new THREE.BoxGeometry(42, 16, 30), materials.anchorageConcrete, x + direction * 10, 4, 0);
-        // Foundation footing deeper
-        createBox(group, new THREE.BoxGeometry(46, 6, 32), materials.anchorageRoof, x + direction * 10, -5, 0);
-        // Cable housing / splay chamber just below deck where cables fan to eye-bars
-        createBox(group, new THREE.BoxGeometry(14, 7, 16), materials.anchorageRoof, x + direction * 4, 15.5, 0);
-        // Small portal where cables enter housing (two openings)
+        const blockX = x - direction * 14;
+        // Buried gravity block: top just above grade, north/south face clear of the arch
+        createBox(group, new THREE.BoxGeometry(36, 10, 26), materials.anchorageConcrete, blockX, -3, 0);
+        // Foundation footing, tucked under the grade slab
+        createBox(group, new THREE.BoxGeometry(40, 4, 28), materials.anchorageRoof, blockX, -7.5, 0);
+        // Small portal collars where the main cables terminate at deck level.
+        // The gravity block stays buried; no exposed diagonal eye-bars (the
+        // approach is carried by the vertical steel bent at the suspension line).
         for (const side of [-1, 1]) {
           const cz = side * CABLE_Z;
-          // Eye-bar splay: diagonal from cable at ANCHORAGE_CABLE_Y down into block
-          const top = new THREE.Vector3(x, ANCHORAGE_CABLE_Y, cz);
-          const bottom = new THREE.Vector3(x + direction * 12, 7, cz * 0.35);
-          beamBetween(group, top, bottom, 0.42, materials.cable);
-          // Housing portal frame
-          createBox(group, new THREE.BoxGeometry(0.6, 3.2, 2.2), materials.anchorageConcrete, x, ANCHORAGE_CABLE_Y - 1.2, cz);
+          createBox(group, new THREE.BoxGeometry(0.9, 3.2, 2.4), materials.anchorageConcrete, x, ANCHORAGE_CABLE_Y - 1.6, cz);
         }
         // Approach slab tying deck over anchorage (deck already at DECK_Y)
-        createBox(group, new THREE.BoxGeometry(18, 0.9, DECK_WIDTH + 1), materials.asphalt, x + direction * 2, DECK_Y - 0.45, 0);
+        createBox(group, new THREE.BoxGeometry(18, 0.9, DECK_WIDTH + 1), materials.roadSurface, x + direction * 2, DECK_Y - 0.45, 0);
         group.position.y = 0;
         bridgeGroup.add(group);
+      }
+    }
+
+    function createFortPointArch() {
+      // Two-hinged, four-rib steel arch over Fort Point. Dimensions from the 1937
+      // Report of the Chief Engineer: 319 ft 7 in. span, 113 ft rise, deck 185 ft
+      // above the springing line, four ribs at 42 ft 6 in. / +30 ft centres.
+      const arch = new THREE.Group();
+      arch.name = 'Fort Point Arch (319 ft 7 in. span, 113 ft rise)';
+      bridgeGroup.add(arch);
+      if (!shared.beamGeometry) shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const segments = 12;
+      const ribDepth = 1.1;
+      const innerZ = BRIDGE_DIMENSIONS.fortPointArchInnerRibSpacingFt * BRIDGE_SCALE / 2;
+      const outerZ = innerZ + BRIDGE_DIMENSIONS.fortPointArchOuterRibOffsetFt * BRIDGE_SCALE;
+      const ribZ = [-outerZ, -innerZ, innerZ, outerZ];
+      const deckUnder = DECK_Y - .675;
+      const halfSpan = FORT_POINT_ARCH_SPAN / 2;
+      const nodeAt = (index, z, top = false) => {
+        const t = -1 + (index * 2) / segments;
+        const y = FORT_POINT_ARCH_SPRING_Y + FORT_POINT_ARCH_RISE * (1 - t * t);
+        return new THREE.Vector3(FORT_POINT_ARCH_CENTER_X + t * halfSpan, y + (top ? ribDepth : 0), z);
+      };
+      const member = (start, end, thickness, material = materials.orangeSteel) => {
+        const vector = new THREE.Vector3().subVectors(end, start);
+        const length = vector.length();
+        if (length < .001) return null;
+        const mesh = new THREE.Mesh(shared.beamGeometry, material);
+        mesh.position.copy(start).add(end).multiplyScalar(.5);
+        mesh.scale.set(length, thickness, thickness);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        arch.add(mesh);
+        return mesh;
+      };
+
+      for (const z of ribZ) {
+        for (let i = 0; i < segments; i += 1) {
+          member(nodeAt(i, z), nodeAt(i + 1, z), .34, materials.orangeSteel);
+          member(nodeAt(i, z, true), nodeAt(i + 1, z, true), .34, materials.orangeSteel);
+          if (i % 2 === 0) member(nodeAt(i, z), nodeAt(i + 1, z, true), .17, materials.orangeHot);
+          else member(nodeAt(i, z, true), nodeAt(i + 1, z), .17, materials.orangeHot);
+        }
+        for (let i = 1; i < segments; i += 1) {
+          member(nodeAt(i, z), nodeAt(i, z, true), .18, materials.orangeDark);
+          const top = nodeAt(i, z, true);
+          member(top, new THREE.Vector3(top.x, deckUnder, z), .22, materials.orangeSteel);
+        }
+      }
+
+      // Lateral bracing between the four ribs, plus transverse floor beams under the deck.
+      for (let i = 1; i < segments; i += 1) {
+        for (let r = 0; r < ribZ.length - 1; r += 1) {
+          member(nodeAt(i, ribZ[r], true), nodeAt(i, ribZ[r + 1], true), .15, materials.orangeDark);
+        }
+        const x = nodeAt(i, 0).x;
+        member(new THREE.Vector3(x, deckUnder - .14, -outerZ - .4), new THREE.Vector3(x, deckUnder - .14, outerZ + .4), .24, materials.orangeDark);
+      }
+      for (let i = 0; i < segments; i += 2) {
+        for (let r = 0; r < ribZ.length - 1; r += 1) {
+          member(nodeAt(i, ribZ[r], true), nodeAt(i + 1, ribZ[r + 1], true), .11, materials.orangeHot);
+          member(nodeAt(i, ribZ[r + 1], true), nodeAt(i + 1, ribZ[r], true), .11, materials.orangeHot);
+        }
+      }
+
+      // Concrete pylons at the two bearings; both rise above the roadway like the originals.
+      const pylonXs = [FORT_POINT_ARCH_SOUTH_X - 1.8, FORT_POINT_ARCH_NORTH_X + 1.8];
+      for (const px of pylonXs) {
+        for (const z of [-5.7, 5.7]) {
+          createBox(arch, new THREE.BoxGeometry(3.6, 19.5, 2.2), materials.anchorageConcrete, px, 11.25, z);
+          createBox(arch, new THREE.BoxGeometry(3.6, 5.4, 2.2), materials.anchorageConcrete, px, 23.7, z);
+        }
+        for (const y of [FORT_POINT_ARCH_SPRING_Y - .55, 10.5, 19.9]) {
+          createBox(arch, new THREE.BoxGeometry(3.6, 1.1, 11.4), materials.anchorageConcrete, px, y, 0);
+        }
+        createBox(arch, new THREE.BoxGeometry(3.8, 1.4, 13.2), materials.anchorageRoof, px, 27.1, 0);
+      }
+      for (const z of [-5.7, 5.7]) {
+        createBox(arch, new THREE.BoxGeometry(4.4, 13, 3.4), materials.anchorageRoof, FORT_POINT_ARCH_NORTH_X + 1.8, -4.5, z);
       }
     }
 
@@ -1442,16 +1683,27 @@
     }
 
     function createRoadLighting() {
+      const poleItems = [], lampItems = [];
       for (let x = SUSPENSION_START + 25; x <= SUSPENSION_END - 25; x += 45) {
         for (const side of [-1, 1]) {
           const z = side * (DECK_WIDTH / 2 - .25);
-          const pole = createBox(bridgeGroup, shared.poleGeometry, materials.lampPole, x, DECK_Y + 4.25, z);
-          pole.castShadow = true;
-          pole.userData.centerX = x; pole.userData.baseZ = z; pole.userData.baseY = 4.25;
-          const lamp = createBox(bridgeGroup, shared.lampGeometry, materials.bridgeLight, x, DECK_Y + 8.6, z);
-          lamp.userData.centerX = x; lamp.userData.baseZ = z; lamp.userData.baseY = 8.6; lamp.userData.bridgeLamp = true;
+          poleItems.push({ centerX: x, baseZ: z, baseY: 4.25 });
+          lampItems.push({ centerX: x, baseZ: z, baseY: 8.6 });
         }
       }
+      function addInstanced(geometry, material, items, name) {
+        const mesh = new THREE.InstancedMesh(geometry, material, items.length);
+        mesh.name = name;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false;
+        items.forEach((item, index) => { item.index = index; });
+        bridgeGroup.add(mesh);
+        deckBatches.push({ mesh, items });
+      }
+      addInstanced(shared.poleGeometry, materials.lampPole, poleItems, 'Instanced lamp posts');
+      addInstanced(shared.lampGeometry, materials.bridgeLight, lampItems, 'Instanced deck lamps');
     }
 
     function createBridgeSigns() {
@@ -1480,6 +1732,9 @@
       const axis = new THREE.Vector3(1, 0, 0);
       const previous = new THREE.Vector3();
       const next = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const matrix = new THREE.Matrix4();
+      const one = new THREE.Vector3(1, 1, 1);
       for (const object of bridgeGroup.children) {
         if (!object.userData || !Number.isFinite(object.userData.centerX)) continue;
         const x = object.userData.centerX;
@@ -1494,17 +1749,68 @@
         object.position.copy(p);
         object.quaternion.setFromUnitVectors(axis, tangent);
       }
-      for (const segment of deckSegments) {
-        const p = getDeckPoint(segment.userData.centerX, 0, response);
-        const before = getDeckPoint(segment.userData.centerX - 5, 0, response);
-        const after = getDeckPoint(segment.userData.centerX + 5, 0, response);
-        segment.position.copy(p);
-        segment.quaternion.setFromUnitVectors(axis, after.sub(before).normalize());
+      for (const batch of deckBatches) {
+        for (const item of batch.items) {
+          const x = item.centerX;
+          const p = getDeckPoint(x, item.baseZ, response);
+          p.y += item.baseY;
+          previous.copy(getDeckPoint(x - 4.8, item.baseZ, response));
+          next.copy(getDeckPoint(x + 4.8, item.baseZ, response));
+          quaternion.setFromUnitVectors(axis, next.sub(previous).normalize());
+          matrix.compose(p, quaternion, one);
+          batch.mesh.setMatrixAt(item.index, matrix);
+        }
+        batch.mesh.instanceMatrix.needsUpdate = true;
       }
       updateTrussGeometry(response);
     }
 
     /* Approaches, terrain, and city generation */
+    function mergeStaticMeshes(group) {
+      if (!mergeGeometries || !group) return;
+      const buckets = new Map();
+      const meshes = [];
+      group.updateWorldMatrix(true, true);
+      group.traverse((object) => {
+        if (!object.isMesh || object.isInstancedMesh || object.isSkinnedMesh || !object.visible) return;
+        const material = object.material;
+        if (!material || Array.isArray(material) || material.transparent || material.opacity < 1 || object.morphTargetInfluences) return;
+        meshes.push(object);
+      });
+      const toLocal = new THREE.Matrix4().copy(group.matrixWorld).invert();
+      for (const mesh of meshes) {
+        const source = mesh.geometry;
+        if (!source || !source.attributes || !source.attributes.position) continue;
+        const geometry = source.index ? source.toNonIndexed() : source.clone();
+        const localMatrix = new THREE.Matrix4().multiplyMatrices(toLocal, mesh.matrixWorld);
+        geometry.applyMatrix4(localMatrix);
+        const attributeKey = Object.keys(geometry.attributes).sort().join(',');
+        const key = `${mesh.material.uuid}|${attributeKey}|${mesh.castShadow ? 1 : 0}|${mesh.receiveShadow ? 1 : 0}`;
+        if (!buckets.has(key)) buckets.set(key, { material: mesh.material, castShadow: mesh.castShadow, receiveShadow: mesh.receiveShadow, geometries: [], meshes: [] });
+        const bucket = buckets.get(key);
+        bucket.geometries.push(geometry);
+        bucket.meshes.push(mesh);
+      }
+      for (const bucket of buckets.values()) {
+        if (bucket.geometries.length < 2) {
+          for (const geometry of bucket.geometries) geometry.dispose();
+          continue;
+        }
+        let merged = null;
+        try {
+          merged = mergeGeometries(bucket.geometries, false);
+        } catch (mergeError) { merged = null; }
+        for (const geometry of bucket.geometries) geometry.dispose();
+        if (!merged) continue;
+        const mesh = new THREE.Mesh(merged, bucket.material);
+        mesh.name = `Merged ${bucket.material.name || 'environment'} geometry`;
+        mesh.castShadow = bucket.castShadow;
+        mesh.receiveShadow = bucket.receiveShadow;
+        group.add(mesh);
+        for (const original of bucket.meshes) if (original.parent) original.parent.remove(original);
+      }
+    }
+
     function buildEnvironment() {
       environmentGroup = new THREE.Group();
       environmentGroup.name = 'San Francisco and Marin context';
@@ -1518,6 +1824,7 @@
 
       createLandMasses();
       createApproaches();
+      createApproachViaducts();
       createFortPoint();
       createCity();
       createHeadlands();
@@ -1526,6 +1833,7 @@
       createSignGantry(362, ['101 NORTH', 'Marin • Sausalito'], -1);
       createApproachBarriers();
       createGroundScatter();
+      mergeStaticMeshes(environmentGroup);
     }
 
     function createLandMasses() {
@@ -1547,45 +1855,130 @@
     }
 
     function createApproaches() {
+      // Slab and rails are segmented so they follow the eased vertical curve with
+      // a level tangent at the bridge joint — no kink. Marks, lights and barriers
+      // key off approachCenterY / approachAngle below.
       for (const side of [-1, 1]) {
-        const rampCenter = side < 0 ? -APPROACH_CENTER_X : APPROACH_CENTER_X;
-        const ramp = createBox(environmentGroup, new THREE.BoxGeometry(APPROACH_LENGTH, 1.7, DECK_WIDTH), materials.asphalt, rampCenter, APPROACH_CENTER_Y, 0);
-        ramp.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
+        const sgn = side < 0 ? -1 : 1;
+        const xInner = sgn * ANCHORAGE_X;
+        const xOuter = sgn * BRIDGE_HALF_LENGTH;
+        const segs = 13;
+        for (let i = 0; i < segs; i += 1) {
+          const x0 = xInner + (xOuter - xInner) * (i / segs);
+          const x1 = xInner + (xOuter - xInner) * ((i + 1) / segs);
+          const y0 = approachCenterY(x0);
+          const y1 = approachCenterY(x1);
+          const len = Math.hypot(x1 - x0, y1 - y0) + .6;
+          const ang = Math.atan2(y1 - y0, x1 - x0);
+          const slab = createBox(environmentGroup, new THREE.BoxGeometry(len, 1.7, DECK_WIDTH), materials.roadSurface, (x0 + x1) / 2, (y0 + y1) / 2, 0);
+          slab.rotation.z = ang;
+          for (const z of [-(DECK_WIDTH / 2 + .8), DECK_WIDTH / 2 + .8]) {
+            const rail = createBox(environmentGroup, new THREE.BoxGeometry(len, .45, .25), materials.orangeSteel, (x0 + x1) / 2, (y0 + y1) / 2 + 3.2, z);
+            rail.rotation.z = ang;
+          }
+        }
         for (const z of [-2.7, -.9, .9, 2.7]) {
           for (let index = 1; index < 9; index += 1) {
             const progress = index / 9;
             const x = side < 0 ? -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH : BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
-            const y = APPROACH_END_Y + progress * (DECK_Y - APPROACH_END_Y);
-            const mark = createBox(environmentGroup, shared.laneGeometry, materials.laneWhite, x, y + .7, z);
-            mark.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
+            // Stripe sits on the 1.7-thick ramp slab (top at +.85), not buried in it
+            const mark = createBox(environmentGroup, shared.laneGeometry, materials.laneWhite, x, approachCenterY(x) + .88, z);
+            mark.rotation.z = approachAngle(x);
           }
-        }
-        for (const z of [-(DECK_WIDTH / 2 + .8), DECK_WIDTH / 2 + .8]) {
-          const rail = createBox(environmentGroup, new THREE.BoxGeometry(APPROACH_LENGTH, .45, .25), materials.orangeSteel, rampCenter, APPROACH_CENTER_Y + 3.2, z);
-          rail.rotation.z = side < 0 ? APPROACH_ROTATION : -APPROACH_ROTATION;
         }
       }
       for (let index = 0; index <= 4; index += 1) {
         const progress = (index + .5) / 5;
-        const y = APPROACH_END_Y + progress * (DECK_Y - APPROACH_END_Y);
         const leftX = -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH;
         const rightX = BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
         for (const z of [-(DECK_WIDTH / 2 + 2.4), DECK_WIDTH / 2 + 2.4]) {
-          createStreetLight(leftX, y + 4.25, z);
-          createStreetLight(rightX, y + 4.25, z);
+          createStreetLight(leftX, approachCenterY(leftX), z);
+          createStreetLight(rightX, approachCenterY(rightX), z);
+        }
+      }
+    }
+
+    function createApproachViaducts() {
+      // Open deck-truss viaducts carrying both approach ramps on red steel
+      // trestle bents (per reference photos) — no concrete masses. Top chords sit
+      // on the eased ramp centreline so they meet the main stiffening truss flush
+      // with a level tangent (no kink). Grassed banks rise to meet each toe.
+      if (!shared.beamGeometry) shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const group = new THREE.Group();
+      group.name = 'Approach truss viaducts on steel bents';
+      environmentGroup.add(group);
+      const rampY = (x) => approachCenterY(x);
+      const beam = (start, end, thickness, material) => beamBetween(group, start, end, thickness, material);
+      for (const side of [-1, 1]) {
+        const sgn = side < 0 ? -1 : 1;
+        const xStart = sgn * ANCHORAGE_X;
+        const xEnd = sgn * BRIDGE_HALF_LENGTH;
+        // Embankment bank grounding the toe: top rises 3 -> 13.2 over |x| 400 -> 452
+        const bankAng = Math.atan2(10.2, 52);
+        const bank = createBox(group, new THREE.BoxGeometry(57, 12, 26), side < 0 ? materials.presidio : materials.headland, sgn * 426, 2.1, 0);
+        bank.rotation.z = side < 0 ? -bankAng : bankAng;
+        const panels = Math.max(4, Math.round(APPROACH_LENGTH / 9));
+        const nodeX = (i) => xStart + (xEnd - xStart) * (i / panels);
+        const topAt = (i, z) => new THREE.Vector3(nodeX(i), rampY(nodeX(i)), z);
+        const bottomAt = (i, z) => new THREE.Vector3(nodeX(i), rampY(nodeX(i)) - TRUSS_DEPTH, z);
+        for (let i = 0; i < panels; i += 1) {
+          for (const zSide of [-1, 1]) {
+            const z = zSide * TRUSS_Z;
+            beam(topAt(i, z), topAt(i + 1, z), TRUSS_CHORD_THICKNESS, materials.orangeSteel);
+            beam(bottomAt(i, z), bottomAt(i + 1, z), TRUSS_CHORD_THICKNESS, materials.orangeDark);
+            beam(topAt(i, z), bottomAt(i, z), .36, materials.orangeSteel);
+            const diagStart = (i % 2 === 0) ? bottomAt(i, z) : topAt(i, z);
+            const diagEnd = (i % 2 === 0) ? topAt(i + 1, z) : bottomAt(i + 1, z);
+            beam(diagStart, diagEnd, TRUSS_DIAGONAL_THICKNESS, materials.orangeHot);
+          }
+          if (i % 2 === 0) {
+            beam(bottomAt(i, -TRUSS_Z), bottomAt(i + 1, TRUSS_Z), .3, materials.orangeHot);
+            beam(bottomAt(i, TRUSS_Z), bottomAt(i + 1, -TRUSS_Z), .3, materials.orangeHot);
+          }
+        }
+        // End verticals at the toe
+        for (const zSide of [-1, 1]) beam(topAt(panels, zSide * TRUSS_Z), bottomAt(panels, zSide * TRUSS_Z), .36, materials.orangeSteel);
+        // Red steel trestle bents down to grade, anchorage cap, or embankment bank.
+        // The bent at the suspension line is vertical (no raking strut) and picks up
+        // both the main-truss end and the approach-truss start.
+        for (const i of [0, 3, 6, 9, 12, 14]) {
+          if (i > panels) continue;
+          const x = nodeX(i);
+          const topY = rampY(x) - TRUSS_DEPTH;
+          const baseY = approachGroundY(x);
+          for (const zSide of [-1, 1]) {
+            const z = zSide * TRUSS_Z;
+            beam(new THREE.Vector3(x, baseY - .5, z), new THREE.Vector3(x, topY, z), .55, materials.orangeSteel);
+            createBox(group, new THREE.BoxGeometry(2.2, .8, 2.2), materials.anchorageRoof, x, baseY, z);
+          }
+          beam(new THREE.Vector3(x, topY, -TRUSS_Z), new THREE.Vector3(x, topY, TRUSS_Z), .5, materials.orangeSteel);
+          const midY = (baseY + topY) / 2;
+          beam(new THREE.Vector3(x, midY, -TRUSS_Z), new THREE.Vector3(x, midY, TRUSS_Z), .35, materials.orangeDark);
+          beam(new THREE.Vector3(x, baseY, -TRUSS_Z), new THREE.Vector3(x, topY, TRUSS_Z), .3, materials.orangeHot);
+          beam(new THREE.Vector3(x, baseY, TRUSS_Z), new THREE.Vector3(x, topY, -TRUSS_Z), .3, materials.orangeHot);
         }
       }
     }
 
     function createStreetLight(x, y, z) {
-      createBox(environmentGroup, shared.poleGeometry, materials.lampPole, x, y, z);
-      createBox(environmentGroup, shared.lampGeometry, materials.bridgeLight, x, y + 4.5, z);
+      // y is the road centreline: run the pole from the ground up to the lamp head
+      // (approach poles previously floated above the grade).
+      const ground = approachGroundY(x);
+      const lampY = y + 8.75;
+      const height = Math.max(4, lampY - ground);
+      const pole = createBox(environmentGroup, shared.poleGeometry, materials.lampPole, x, ground + height / 2, z);
+      pole.scale.y = height / 8.5;
+      createBox(environmentGroup, shared.lampGeometry, materials.bridgeLight, x, lampY, z);
     }
 
     function createFortPoint() {
+      // Fort Point sits directly beneath the Fort Point Arch, between its two pylons.
+      // The brick massing is stylized at ~0.3 scale to keep it below the arch springing.
+      createBox(environmentGroup, new THREE.BoxGeometry(34, 5, 26), materials.shore, FORT_POINT_ARCH_CENTER_X, .25, 0);
       const fort = new THREE.Group();
-      fort.name = 'Fort Point inspired structure';
-      fort.position.set(-255, 2, -45);
+      fort.name = 'Fort Point (under the Fort Point Arch)';
+      fort.position.set(FORT_POINT_ARCH_CENTER_X, 2.7, 0);
+      fort.scale.setScalar(.3);
       createBox(fort, new THREE.BoxGeometry(53, 15, 44), materials.fort, 0, 6, 0);
       createBox(fort, new THREE.BoxGeometry(58, 4, 49), materials.fortRoof, 0, 15, 0);
       for (const x of [-21, 21]) {
@@ -1970,8 +2363,11 @@
         uDeepColor: { value: new THREE.Color(0x0e475e) },
         uBayColor: { value: new THREE.Color(0x1d6f88) },
         uShallowColor: { value: new THREE.Color(0x2da4ba) },
-        uFoamColor: { value: new THREE.Color(0xf2f9fa) }
+        uFoamColor: { value: new THREE.Color(0xf2f9fa) },
+        uReflection: { value: new THREE.DataTexture(new Uint8Array([80, 140, 180, 255]), 1, 1) },
+        uHasReflection: { value: 0 }
       };
+      waterUniforms.uReflection.value.needsUpdate = true;
       try {
         waterMaterial = new THREE.ShaderMaterial({
           uniforms: waterUniforms,
@@ -1980,6 +2376,7 @@
             uniform float uWind;
             varying vec3 vWorld;
             varying float vWaveHeight;
+            varying vec2 vScreenUV;
 
             void main() {
               // True 2D swell: phase from world XZ (local plane has z=0 for all verts)
@@ -1997,6 +2394,7 @@
               vWaveHeight = h;
 
               gl_Position = projectionMatrix * viewMatrix * worldPos;
+              vScreenUV = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
             }
           `,
           fragmentShader: `
@@ -2009,9 +2407,12 @@
             uniform vec3 uFoamColor;
             uniform float uTime;
             uniform float uWind;
+            uniform sampler2D uReflection;
+            uniform float uHasReflection;
 
             varying vec3 vWorld;
             varying float vWaveHeight;
+            varying vec2 vScreenUV;
 
             // Analytical 2D gradient noise for continuous fluid waves without grid or stripe artifacts
             vec2 hash2(vec2 p) {
@@ -2091,9 +2492,12 @@
               vec3 waterBase = mix(uDeepColor, uBayColor, clamp(0.5 + N.y * 0.5 + vWaveHeight * 0.3, 0.0, 1.0));
               waterBase = mix(waterBase, uShallowColor, clamp(vWaveHeight * 0.7 + 0.3, 0.0, 1.0));
 
-              // Sky reflection
+              // Sky reflection, upgraded to a planar render of the bridge when available
               vec3 skyRefl = mix(uSkyColor, vec3(0.96, 0.98, 1.0), pow(clamp(1.0 - NdotV, 0.0, 1.0), 2.0) * 0.40);
-              vec3 finalColor = mix(waterBase, skyRefl, fresnel * 0.82) + specular + sssColor;
+              vec2 reflectUV = clamp(vScreenUV + slope * 0.012, vec2(0.001), vec2(0.999));
+              vec3 planarRefl = texture2D(uReflection, reflectUV).rgb;
+              vec3 reflectionColor = mix(skyRefl, planarRefl, uHasReflection);
+              vec3 finalColor = mix(waterBase, reflectionColor, fresnel * 0.82) + specular + sssColor;
 
               // Gentle whitecaps on high wind
               float foamNoise = clamp(n3.x * 0.5 + 0.5 + n4.x * 0.3, 0.0, 1.0);
@@ -2162,6 +2566,87 @@
         boat.userData = { ...path, baseZ: path.z };
         waterGroup.add(boat);
         boats.push(boat);
+      }
+    }
+
+    /* Planar water reflection: mirrored low-detail bridge rendered with the main camera */
+    function buildReflection() {
+      try {
+        if (!waterUniforms) return;
+        reflectionScene = new THREE.Scene();
+        if (skyAvailable && Sky) {
+          reflectionSky = new Sky();
+          reflectionSky.scale.set(8500, -8500, 8500);
+          reflectionScene.add(reflectionSky);
+        } else {
+          reflectionScene.background = new THREE.Color(0x8fb9de);
+        }
+        reflectionProxy = new THREE.Group();
+        reflectionProxy.name = 'Mirrored bridge reflection proxy';
+        reflectionProxy.scale.y = -1;
+        reflectionScene.add(reflectionProxy);
+        const structure = [];
+        const cables = [];
+        const addProxyBox = (list, width, height, depth, x, y, z, rotationZ = 0) => {
+          const geometry = new THREE.BoxGeometry(width, height, depth);
+          const matrix = new THREE.Matrix4().makeRotationZ(rotationZ);
+          matrix.setPosition(x, y, z);
+          geometry.applyMatrix4(matrix);
+          list.push(geometry);
+        };
+        // Deck slab, lower chords, and the approach ramps
+        addProxyBox(structure, SUSPENSION_LENGTH + 40, 4.6, DECK_WIDTH + 2, 0, DECK_Y - 1.8, 0);
+        for (const side of [-1, 1]) {
+          addProxyBox(structure, SUSPENSION_LENGTH + 40, 1.4, 1.2, 0, DECK_Y - TRUSS_DEPTH, side * TRUSS_Z);
+          const rampAngle = Math.atan2(DECK_Y - APPROACH_END_Y, APPROACH_LENGTH);
+          addProxyBox(structure, APPROACH_LENGTH, 3.4, DECK_WIDTH, side * (ANCHORAGE_X + APPROACH_LENGTH / 2), (DECK_Y + APPROACH_END_Y) / 2 - 1.2, 0, -side * rampAngle);
+        }
+        // Towers: legs, portals, and cap
+        for (const side of [-1, 1]) {
+          const x = side * TOWER_X;
+          for (const z of [-3.4, 3.4]) addProxyBox(structure, 3.3, TOWER_TOP_Y, 2.3, x, TOWER_TOP_Y / 2, z);
+          for (const y of [DECK_Y - 1.2, DECK_Y + 25, DECK_Y + 49, TOWER_TOP_Y - 1.2]) addProxyBox(structure, 4.4, 2.4, 9.3, x, y, 0);
+        }
+        // Main cables follow the same catenary as the exhibit
+        for (const side of [-1, 1]) {
+          const points = [];
+          for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += 6) points.push(new THREE.Vector3(x, cableHeight(x), side * CABLE_Z));
+          cables.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 140, 1.15, 4, false));
+        }
+        const proxyStructureMaterial = new THREE.MeshBasicMaterial({ color: 0x5c2718, side: THREE.DoubleSide, fog: false, toneMapped: false });
+        const proxyCableMaterial = new THREE.MeshBasicMaterial({ color: 0x74371f, side: THREE.DoubleSide, fog: false, toneMapped: false });
+        const addProxyBucket = (geometries, material) => {
+          let merged = null;
+          if (mergeGeometries) {
+            try { merged = mergeGeometries(geometries, false); } catch (mergeError) { merged = null; }
+          }
+          if (merged) {
+            for (const geometry of geometries) geometry.dispose();
+            const mesh = new THREE.Mesh(merged, material);
+            mesh.frustumCulled = false;
+            reflectionProxy.add(mesh);
+          } else {
+            for (const geometry of geometries) {
+              const mesh = new THREE.Mesh(geometry, material);
+              mesh.frustumCulled = false;
+              reflectionProxy.add(mesh);
+            }
+          }
+        };
+        addProxyBucket(structure, proxyStructureMaterial);
+        addProxyBucket(cables, proxyCableMaterial);
+        const bounds = $('viewport').getBoundingClientRect();
+        const width = Math.max(1, Math.floor(bounds.width * .5));
+        const height = Math.max(1, Math.floor(bounds.height * .5));
+        reflectionRT = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true });
+        reflectionRT.texture.colorSpace = THREE.NoColorSpace;
+        waterUniforms.uReflection.value = reflectionRT.texture;
+        waterUniforms.uHasReflection.value = 1;
+      } catch (reflectionError) {
+        console.warn('Planar water reflection disabled', reflectionError);
+        reflectionScene = null;
+        reflectionRT = null;
+        if (waterUniforms) waterUniforms.uHasReflection.value = 0;
       }
     }
 
@@ -2583,77 +3068,510 @@
     }
 
     /* Traffic system */
+    const carPalette = [0xd7dce0, 0x22272c, 0x7b1f1b, 0x2e4d6b, 0x48573f, 0xbab3a2, 0x835a33, 0x376d72];
+    const utilityPalette = [0x9b744c, 0x394d5e, 0x6f2b25, 0xcfd2cd];
     const vehicleTypes = [
-      { name: 'compact', label: 'Compact', scale: [2.8, 1.1, 1.45], color: 0x4cb6b1, weight: 1 },
-      { name: 'sedan', label: 'Sedan', scale: [3.4, 1.15, 1.55], color: 0xd6dce1, weight: 2 },
-      { name: 'suv', label: 'SUV', scale: [3.7, 1.6, 1.75], color: 0x3d6074, weight: 2 },
-      { name: 'pickup', label: 'Pickup', scale: [4.1, 1.45, 1.7], color: 0x9b744c, weight: 1 },
-      { name: 'bus', label: 'Transit bus', scale: [7, 3, 2.25], color: 0xd9b557, weight: 1 },
-      { name: 'delivery', label: 'Delivery truck', scale: [5.4, 2.4, 2], color: 0xe7e9db, weight: 1 },
-      { name: 'semi', label: 'Semi-trailer', scale: [10, 3, 2.3], color: 0x9b4742, weight: 1, heavy: true },
-      { name: 'motorcycle', label: 'Motorcycle', scale: [2.2, .8, .65], color: 0x22292e, weight: 1, small: true },
-      { name: 'emergency', label: 'Emergency', scale: [3.8, 1.35, 1.6], color: 0xd74b3e, weight: 1, emergency: true },
-      { name: 'maintenance', label: 'Maintenance', scale: [4.8, 1.8, 1.8], color: 0xeb9751, weight: 1, heavy: true }
+      { name: 'compact', label: 'Compact', scale: [2.8, 1.1, 1.35], color: 0x4cb6b1, palette: carPalette, weight: 1 },
+      { name: 'sedan', label: 'Sedan', scale: [3.4, 1.15, 1.45], color: 0xd6dce1, palette: carPalette, weight: 2 },
+      { name: 'suv', label: 'SUV', scale: [3.7, 1.6, 1.55], color: 0x3d6074, palette: carPalette, weight: 2 },
+      { name: 'pickup', label: 'Pickup', scale: [4.1, 1.45, 1.6], color: 0x9b744c, palette: utilityPalette, weight: 1 },
+      { name: 'bus', label: 'Transit bus', scale: [7, 3, 1.9], color: 0xd9b557, weight: 1 },
+      { name: 'delivery', label: 'Delivery truck', scale: [5.4, 2.4, 1.85], color: 0xe7e9db, weight: 1 },
+      { name: 'semi', label: 'Semi-trailer', scale: [10, 3, 2], color: 0x9b4742, palette: [0x9b4742, 0x2f4f6f, 0x6e7478, 0xd7d9d5], weight: 1, heavy: true },
+      { name: 'motorcycle', label: 'Motorcycle', scale: [2.2, .8, .55], color: 0x22292e, palette: [0x20262a, 0x7b1f1b], weight: 1, small: true },
+      { name: 'emergency', label: 'Emergency', scale: [3.8, 1.35, 1.5], color: 0xf0f2ef, weight: 1, emergency: true },
+      { name: 'maintenance', label: 'Maintenance', scale: [4.8, 1.8, 1.65], color: 0xe8933f, weight: 1, heavy: true }
     ];
 
-    function makeVehicle(type) {
+    function vehiclePaint(color) {
+      if (!shared.vehiclePaint) shared.vehiclePaint = new Map();
+      if (!shared.vehiclePaint.has(color)) {
+        shared.vehiclePaint.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: .38, metalness: .18, clearcoat: .75, clearcoatRoughness: .28, envMapIntensity: .9 }));
+      }
+      return shared.vehiclePaint.get(color);
+    }
+
+    function extrudeProfile(points, width) {
+      const shape = new THREE.Shape();
+      shape.moveTo(points[0][0], points[0][1]);
+      for (let index = 1; index < points.length; index += 1) shape.lineTo(points[index][0], points[index][1]);
+      shape.closePath();
+      const geometry = new THREE.ExtrudeGeometry(shape, { depth: width, bevelEnabled: false, steps: 1, curveSegments: 1 });
+      geometry.translate(0, 0, -width / 2);
+      return geometry;
+    }
+
+    function buildCarGeometry(definition, options) {
+      const [L, H, W] = definition.scale;
+      const clearance = H * options.clearance;
+      const beltY = H * options.belt;
+      const hoodY = beltY - H * options.hoodDrop;
+      const trunkY = beltY - H * options.trunkDrop;
+      const cabinFront = L * options.cabinFront;
+      const cabinRear = -L * options.cabinRear;
+      const roofY = H * options.roof;
+      const roofFront = cabinFront - L * options.windshield;
+      const roofRear = cabinRear + L * options.backlight;
+      const bodyPoints = [
+        [-L / 2, clearance],
+        [L / 2, clearance],
+        [L / 2, clearance + H * .17],
+        [L / 2 - L * .02, hoodY],
+        [cabinFront, hoodY],
+        [cabinFront, beltY],
+        [cabinRear, beltY],
+        [cabinRear, trunkY],
+        [-L / 2 + L * .02, trunkY],
+        [-L / 2, clearance + H * .15]
+      ];
+      const cabinPoints = [
+        [cabinFront, beltY],
+        [roofFront, roofY],
+        [roofRear, roofY],
+        [cabinRear, beltY]
+      ];
+      return {
+        body: extrudeProfile(bodyPoints, W),
+        cabin: extrudeProfile(cabinPoints, W * options.cabinWidth),
+        L, H, W, clearance, beltY, cabinFront, cabinRear, roofY, roofFront, roofRear,
+        wheelR: H * options.wheel,
+        wheelWidth: Math.max(.12, W * .105),
+        axles: [L * options.axleFront, -L * options.axleRear],
+        cabinWidth: options.cabinWidth,
+        handleX: -L * .06
+      };
+    }
+
+    function buildPickupGeometry(definition) {
+      const [L, H, W] = definition.scale;
+      const clearance = H * .11;
+      const beltY = H * .58;
+      const hoodY = beltY - H * .035;
+      const bedRailY = H * .47;
+      const cabinFront = L * .30;
+      const cabinRear = L * .02;
+      const roofY = H * .965;
+      const roofFront = cabinFront - L * .15;
+      const roofRear = cabinRear + L * .025;
+      const bodyPoints = [
+        [-L / 2, clearance],
+        [L / 2, clearance],
+        [L / 2, clearance + H * .18],
+        [L / 2 - L * .02, hoodY],
+        [cabinFront, hoodY],
+        [cabinFront, beltY],
+        [cabinRear, beltY],
+        [cabinRear, bedRailY],
+        [-L / 2 + L * .02, bedRailY],
+        [-L / 2, clearance + H * .16]
+      ];
+      const cabinPoints = [
+        [cabinFront, beltY],
+        [roofFront, roofY],
+        [roofRear, roofY],
+        [cabinRear, beltY]
+      ];
+      const bedRear = -L / 2 + .06;
+      return {
+        body: extrudeProfile(bodyPoints, W),
+        cabin: extrudeProfile(cabinPoints, W * .82),
+        L, H, W, clearance, beltY, cabinFront, cabinRear, roofY, roofFront, roofRear,
+        wheelR: H * .225,
+        wheelWidth: Math.max(.14, W * .105),
+        axles: [L * .33, -L * .28],
+        cabinWidth: .82,
+        handleX: cabinRear + L * .035,
+        bed: { center: (cabinRear + bedRear) / 2, length: cabinRear - bedRear, width: W * .82, railY: bedRailY }
+      };
+    }
+
+    function addVehicleMesh(parent, geometry, material, x, y, z, sx, sy, sz) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      if (sx !== undefined) mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addVehicleBox(parent, material, x, y, z, sx, sy, sz) {
+      return addVehicleMesh(parent, shared.unitBox, material, x, y, z, sx, sy, sz);
+    }
+
+    function addVehicleWheel(parent, x, z, radius, width) {
+      addVehicleMesh(parent, shared.vehicleWheel, materials.tire, x, radius, z, radius, radius, width);
+      addVehicleMesh(parent, shared.vehicleHub, materials.hub, x, radius, z, radius, radius, width * 1.06);
+    }
+
+    function addVehicleBeam(parent, material, start, end, thickness) {
+      const vector = new THREE.Vector3().subVectors(end, start);
+      const length = vector.length();
+      if (length < .001) return null;
+      const mesh = new THREE.Mesh(shared.unitBox, material);
+      mesh.position.copy(start).add(end).multiplyScalar(.5);
+      mesh.scale.set(length, thickness, thickness);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), vector.normalize());
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function assembleCar(group, definition, paint, parts) {
+      const { L, H, W, clearance, beltY, cabinFront, cabinRear, roofY, roofFront, roofRear, wheelR, wheelWidth, axles, cabinWidth } = parts;
+      const body = addVehicleMesh(group, parts.body, paint, 0, 0, 0);
+      addVehicleMesh(group, parts.cabin, materials.vehicleGlass, 0, 0, 0);
+      addVehicleBox(group, paint, (roofFront + roofRear) / 2, roofY + .018, 0, Math.abs(roofFront - roofRear) + .04, .036, W * cabinWidth + .02);
+
+      const zPillar = W * cabinWidth / 2 + .012;
+      const bPillarX = (roofFront + roofRear) / 2;
+      for (const side of [-1, 1]) {
+        const z = side * zPillar;
+        addVehicleBeam(group, paint, new THREE.Vector3(cabinFront, beltY, z), new THREE.Vector3(roofFront, roofY, z), .045);
+        addVehicleBeam(group, paint, new THREE.Vector3(cabinRear, beltY, z), new THREE.Vector3(roofRear, roofY, z), .045);
+        addVehicleBeam(group, paint, new THREE.Vector3(bPillarX, beltY, z), new THREE.Vector3(bPillarX, roofY, z), .04);
+        addVehicleBox(group, materials.trim, cabinFront + L * .01, beltY + .055, side * (W / 2 + .045), .07, .06, .12);
+        addVehicleBox(group, materials.chrome, parts.handleX, beltY - .055, side * (W / 2 + .006), .17, .025, .02);
+        addVehicleBox(group, materials.trim, 0, clearance + .035, side * (W / 2 - .005), L * .66, .05, .025);
+      }
+
+      for (const axle of axles) {
+        for (const side of [-1, 1]) addVehicleWheel(group, axle, side * (W / 2 - wheelWidth * .32), wheelR, wheelWidth);
+      }
+
+      const frontX = L / 2;
+      const rearX = -L / 2;
+      addVehicleBox(group, materials.trim, frontX + .03, clearance + H * .10, 0, .06, H * .10, W * .98);
+      addVehicleBox(group, materials.trim, rearX - .03, clearance + H * .10, 0, .06, H * .10, W * .98);
+      addVehicleBox(group, materials.trim, frontX + .006, clearance + H * .22, 0, .015, H * .14, W * .38);
+      addVehicleBox(group, materials.chrome, frontX + .012, clearance + H * .29, 0, .012, .022, W * .42);
+      const headlights = [];
+      const brakes = [];
+      for (const side of [-1, 1]) {
+        addVehicleBox(group, materials.headLens, frontX + .006, clearance + H * .33, side * W * .30, .014, H * .065, W * .16);
+        headlights.push(addVehicleBox(group, materials.headlight, frontX + .014, clearance + H * .33, side * W * .30, .010, H * .055, W * .14));
+        addVehicleBox(group, materials.tailLens, rearX - .006, clearance + H * .31, side * W * .30, .014, H * .065, W * .15);
+        brakes.push(addVehicleBox(group, materials.brakeLight, rearX - .014, clearance + H * .31, side * W * .30, .010, H * .055, W * .13));
+      }
+      addVehicleBox(group, materials.plate, rearX - .04, clearance + H * .13, 0, .012, .055, W * .16);
+      addVehicleBox(group, materials.chrome, rearX - .035, clearance + .05, W * .18, .06, .045, .10);
+      addVehicleBox(group, materials.trim, roofRear + .12, roofY + .10, 0, .015, .10, .015);
+      if (H >= 1.5 && !definition.emergency) {
+        for (const side of [-1, 1]) addVehicleBox(group, materials.trim, bPillarX, roofY + .055, side * W * .30, Math.abs(roofFront - roofRear) * .75, .035, .045);
+      }
+      return { body, headlightA: headlights[0], headlightB: headlights[1], brakeA: brakes[0], brakeB: brakes[1] };
+    }
+
+    function addPickupBed(group, parts, paint) {
+      const { L, bed } = parts;
+      addVehicleBox(group, materials.trim, bed.center, bed.railY + .015, 0, bed.length, .025, bed.width);
+      for (const side of [-1, 1]) {
+        addVehicleBox(group, paint, bed.center, bed.railY + .05, side * (bed.width / 2 + .02), bed.length, .09, .04);
+      }
+      addVehicleBox(group, paint, parts.cabinRear - .03, bed.railY + .05, 0, .05, .11, bed.width + .08);
+      addVehicleBox(group, paint, -L / 2 + .04, bed.railY + .055, 0, .06, .13, bed.width + .04);
+      addVehicleBox(group, materials.chrome, -L / 2 + .01, bed.railY + .07, 0, .02, .02, bed.width * .3);
+      addVehicleBox(group, materials.trim, parts.cabinRear - .14, bed.railY + .10, 0, .20, .16, bed.width * .65);
+    }
+
+    function addEmergencyKit(group, definition, paint, parts) {
+      const { L, H, W, clearance, beltY, roofY, roofFront, roofRear } = parts;
+      for (const side of [-1, 1]) {
+        addVehicleBox(group, vehiclePaint(0xb02a22), 0, beltY - H * .08, side * (W / 2 + .006), L * .68, H * .10, .012);
+      }
+      addVehicleBox(group, materials.trim, L / 2 + .08, clearance + H * .12, 0, .10, H * .18, W * 1.02);
+      const beacon = new THREE.Group();
+      const barWidth = W * .72;
+      addVehicleBox(beacon, materials.trim, 0, 0, 0, .14, .05, barWidth);
+      for (let index = 0; index < 4; index += 1) {
+        addVehicleBox(beacon, index % 2 ? materials.blueLight : materials.emergencyLight, 0, .055, -barWidth / 2 + barWidth * (index + .5) / 4, .10, .07, barWidth / 4 * .8);
+      }
+      beacon.position.set((roofFront + roofRear) / 2, roofY + .075, 0);
+      group.add(beacon);
+      return beacon;
+    }
+
+    function addMaintenanceKit(group, definition, paint, parts) {
+      const { L, H, W, bed, clearance } = parts;
+      const utilityHeight = H * .42;
+      const utilityY = bed.railY + utilityHeight / 2 + .03;
+      addVehicleBox(group, vehiclePaint(0xe7e9e4), bed.center, utilityY, 0, bed.length * .92, utilityHeight, W * .86);
+      addVehicleBox(group, materials.trim, bed.center, utilityY + utilityHeight / 2 + .03, 0, bed.length * .94, .06, W * .88);
+      for (const side of [-1, 1]) {
+        addVehicleBox(group, materials.trim, bed.center, bed.railY + H * .10, side * W * .34, bed.length * .70, H * .12, .10);
+      }
+      addVehicleBox(group, materials.amberLight, -L / 2 + .01, utilityY, 0, .02, utilityHeight * .55, W * .65);
+      const beacon = new THREE.Group();
+      addVehicleBox(beacon, materials.trim, 0, 0, 0, .22, .05, .16);
+      addVehicleBox(beacon, materials.amberLight, 0, .07, 0, .16, .08, .12);
+      beacon.position.set(bed.center, utilityY + utilityHeight / 2 + .07, 0);
+      group.add(beacon);
+      return beacon;
+    }
+
+    function mergeVehicleStaticParts(group, preserveObjects) {
+      if (!mergeGeometries || !group) return;
+      const preserve = new Set();
+      for (const object of preserveObjects) {
+        if (!object) continue;
+        preserve.add(object);
+        if (object.traverse) object.traverse((child) => preserve.add(child));
+      }
+      group.updateWorldMatrix(true, true);
+      const buckets = new Map();
+      const meshes = [];
+      group.traverse((object) => {
+        if (!object.isMesh || preserve.has(object) || object.isInstancedMesh) return;
+        const material = object.material;
+        if (!material || Array.isArray(material) || material.transparent || material.opacity < 1) return;
+        meshes.push(object);
+      });
+      for (const mesh of meshes) {
+        const source = mesh.geometry;
+        if (!source || !source.attributes || !source.attributes.position) continue;
+        const geometry = source.index ? source.toNonIndexed() : source.clone();
+        geometry.applyMatrix4(mesh.matrixWorld);
+        const attributeKey = Object.keys(geometry.attributes).sort().join(',');
+        const key = `${mesh.material.uuid}|${attributeKey}`;
+        if (!buckets.has(key)) buckets.set(key, { material: mesh.material, geometries: [], meshes: [] });
+        const bucket = buckets.get(key);
+        bucket.geometries.push(geometry);
+        bucket.meshes.push(mesh);
+      }
+      for (const bucket of buckets.values()) {
+        if (bucket.geometries.length < 2) {
+          for (const geometry of bucket.geometries) geometry.dispose();
+          continue;
+        }
+        let merged = null;
+        try {
+          merged = mergeGeometries(bucket.geometries, false);
+        } catch (mergeError) { merged = null; }
+        for (const geometry of bucket.geometries) geometry.dispose();
+        if (!merged) continue;
+        const mesh = new THREE.Mesh(merged, bucket.material);
+        mesh.name = `Merged vehicle ${bucket.material.name || 'part'}`;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+        for (const original of bucket.meshes) if (original.parent) original.parent.remove(original);
+      }
+    }
+
+    function makeVehicle(type, variant = 0, forcedColor = null) {
       const definition = vehicleTypes.find((item) => item.name === type) || vehicleTypes[0];
+      const palette = definition.palette;
+      const paintColor = forcedColor ?? (palette ? palette[Math.abs(variant) % palette.length] : definition.color);
+      const paint = vehiclePaint(paintColor);
       const group = new THREE.Group();
       group.name = `${definition.label} vehicle`;
-      const body = new THREE.Mesh(shared.vehicleBody, new THREE.MeshPhysicalMaterial({ color: definition.color, roughness: .42, metalness: .15, clearcoat: .7, clearcoatRoughness: .3, envMapIntensity: .9 }));
-      body.scale.set(definition.scale[0], definition.scale[1], definition.scale[2]);
-      body.position.y = definition.scale[1] * .5 + .25;
-      body.castShadow = true;
-      body.receiveShadow = true;
-      group.add(body);
-      if (!definition.small) {
-        const cabin = new THREE.Mesh(shared.vehicleCabin, materials.vehicleGlass);
-        cabin.scale.set(definition.scale[0] * .55, definition.scale[1] * .5, definition.scale[2] * .82);
-        cabin.position.set(-definition.scale[0] * .12, definition.scale[1] * 1.02, 0);
-        cabin.castShadow = true;
-        cabin.receiveShadow = true;
-        group.add(cabin);
-      } else {
-        const rider = new THREE.Mesh(shared.riderGeometry, materials.vehicleGlass);
-        rider.position.y = 1.25; rider.scale.set(.55, .9, .55);
-        rider.castShadow = true;
-        rider.receiveShadow = true;
-        group.add(rider);
-      }
-      const wheelPositions = definition.small ? [[-.7, 0, 0], [.7, 0, 0]] : [[-definition.scale[0] * .58, .05, -definition.scale[2] * .72], [definition.scale[0] * .58, .05, -definition.scale[2] * .72], [-definition.scale[0] * .58, .05, definition.scale[2] * .72], [definition.scale[0] * .58, .05, definition.scale[2] * .72]];
-      for (const [wx, wy, wz] of wheelPositions) {
-        const wheel = new THREE.Mesh(shared.wheelGeometry, materials.tire);
-        wheel.position.set(wx, wy + .45, wz); wheel.rotation.x = Math.PI / 2; wheel.scale.set(.8, .8, .8);
-        wheel.castShadow = true;
-        group.add(wheel);
-      }
-      const headlightMaterial = new THREE.MeshStandardMaterial({ color: 0xf9e7ae, emissive: 0xf7d478, emissiveIntensity: 1.8 });
-      const brakeMaterial = new THREE.MeshStandardMaterial({ color: 0x490d0b, emissive: 0xf04431, emissiveIntensity: 1.8 });
-      const headlightA = new THREE.Mesh(shared.lightGeometry, headlightMaterial);
-      const headlightB = new THREE.Mesh(shared.lightGeometry, headlightMaterial);
-      const brakeA = new THREE.Mesh(shared.lightGeometry, brakeMaterial);
-      const brakeB = new THREE.Mesh(shared.lightGeometry, brakeMaterial);
-      headlightA.position.set(definition.scale[0] * .52, definition.scale[1] * .65, -definition.scale[2] * .66);
-      headlightB.position.set(definition.scale[0] * .52, definition.scale[1] * .65, definition.scale[2] * .66);
-      brakeA.position.set(-definition.scale[0] * .52, definition.scale[1] * .65, -definition.scale[2] * .66);
-      brakeB.position.set(-definition.scale[0] * .52, definition.scale[1] * .65, definition.scale[2] * .66);
-      group.add(headlightA, headlightB, brakeA, brakeB);
+      const [L, H, W] = definition.scale;
+      let body = null;
+      let headlightA = null;
+      let headlightB = null;
+      let brakeA = null;
+      let brakeB = null;
       let beacon = null;
-      if (definition.emergency) {
-        beacon = new THREE.Mesh(shared.beaconGeometry, materials.emergencyLight);
-        beacon.position.y = definition.scale[1] * 1.7; group.add(beacon);
+
+      if (shared.vehicleGeos[type]) {
+        const parts = shared.vehicleGeos[type];
+        const assembled = assembleCar(group, definition, paint, parts);
+        body = assembled.body;
+        headlightA = assembled.headlightA;
+        headlightB = assembled.headlightB;
+        brakeA = assembled.brakeA;
+        brakeB = assembled.brakeB;
+        if (parts.bed) addPickupBed(group, parts, paint);
+        if (type === 'emergency') beacon = addEmergencyKit(group, definition, paint, parts);
+        if (type === 'maintenance') beacon = addMaintenanceKit(group, definition, paint, parts);
+      } else if (type === 'bus') {
+        const clearance = H * .075;
+        body = addVehicleBox(group, paint, 0, clearance + H * .44, 0, L * .98, H * .88, W);
+        addVehicleBox(group, paint, 0, clearance + H * .885, 0, L * .92, .08, W * .90);
+        addVehicleBox(group, materials.trim, 0, clearance + H * .04, 0, L * .96, H * .06, W * 1.002);
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.vehicleGlass, 0, H * .66, side * (W / 2 + .007), L * .82, H * .22, .025);
+          for (let index = -2; index <= 2; index += 1) {
+            addVehicleBox(group, paint, L * .16 * index, H * .66, side * (W / 2 + .016), .05, H * .24, .03);
+          }
+          addVehicleBox(group, vehiclePaint(0x2c5f86), 0, H * .50, side * (W / 2 + .008), L * .90, .06, .012);
+        }
+        addVehicleBox(group, materials.vehicleGlass, L / 2 + .008, H * .69, 0, .02, H * .24, W * .88);
+        addVehicleBox(group, materials.vehicleGlass, -L / 2 - .008, H * .69, 0, .02, H * .24, W * .88);
+        addVehicleBox(group, materials.busSign, L / 2 + .014, H * .84, 0, .02, H * .07, W * .55);
+        addVehicleBox(group, materials.vehicleGlass, L * .22, H * .43, W / 2 + .012, L * .12, H * .34, .02);
+        addVehicleBox(group, materials.trim, L * .22, H * .24, W / 2 + .012, L * .12, H * .10, .02);
+        addVehicleBox(group, materials.trim, L / 2 + .02, H * .12, 0, .06, H * .08, W * .98);
+        addVehicleBox(group, materials.trim, -L / 2 - .02, H * .12, 0, .06, H * .08, W * .98);
+        addVehicleBox(group, materials.trim, 0, H * .94, 0, L * .22, .10, W * .55);
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.trim, L / 2 - .08, H * .72, side * (W / 2 + .12), .05, .16, .06);
+        }
+        const headlights = [];
+        const brakes = [];
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.headLens, L / 2 + .01, H * .25, side * W * .33, .014, .10, .20);
+          headlights.push(addVehicleBox(group, materials.headlight, L / 2 + .018, H * .25, side * W * .33, .010, .08, .17));
+          addVehicleBox(group, materials.tailLens, -L / 2 - .01, H * .25, side * W * .33, .014, .10, .18);
+          brakes.push(addVehicleBox(group, materials.brakeLight, -L / 2 - .018, H * .25, side * W * .33, .010, .08, .15));
+        }
+        addVehicleBox(group, materials.plate, -L / 2 - .055, H * .16, 0, .012, .055, W * .16);
+        for (const axle of [L * .31, -L * .28]) {
+          for (const side of [-1, 1]) addVehicleWheel(group, axle, side * (W / 2 - .07), H * .16, .18);
+        }
+        headlightA = headlights[0]; headlightB = headlights[1];
+        brakeA = brakes[0]; brakeB = brakes[1];
+      } else if (type === 'delivery') {
+        const clearance = H * .07;
+        const cargoX = -L * .12;
+        const cargoY = clearance + H * .46;
+        body = addVehicleBox(group, paint, cargoX, cargoY, 0, L * .72, H * .82, W * .98);
+        for (const side of [-1, 1]) {
+          for (let index = -1; index <= 1; index += 1) {
+            addVehicleBox(group, materials.trim, cargoX + index * L * .20, cargoY, side * (W / 2 + .006), .025, H * .74, .012);
+          }
+          addVehicleBox(group, vehiclePaint(0x3b5c78), cargoX, clearance + H * .27, side * (W / 2 + .008), L * .64, .07, .012);
+        }
+        addVehicleBox(group, materials.trim, -L / 2 - .008, cargoY, 0, .02, H * .78, W * .84);
+        for (const level of [.24, .42, .60]) {
+          addVehicleBox(group, materials.trim, -L / 2 - .02, clearance + H * level, 0, .012, .022, W * .80);
+        }
+        addVehicleBox(group, paint, L * .39, clearance + H * .34, 0, L * .22, H * .68, W * .96);
+        addVehicleBox(group, materials.vehicleGlass, L / 2 + .006, clearance + H * .48, 0, .02, H * .18, W * .84);
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.vehicleGlass, L * .38, clearance + H * .48, side * (W / 2 + .006), L * .14, H * .16, .02);
+          addVehicleBox(group, materials.trim, L * .42, clearance + H * .52, side * (W / 2 + .10), .05, .17, .06);
+        }
+        addVehicleBox(group, paint, L * .39, clearance + H * .72, 0, L * .19, .08, W * .90);
+        addVehicleBox(group, materials.trim, 0, clearance + .07, 0, L * .90, .10, W * .55);
+        addVehicleBox(group, materials.trim, L / 2 + .02, clearance + H * .10, 0, .06, H * .08, W * .98);
+        addVehicleBox(group, materials.trim, -L / 2 - .03, .28, 0, .06, .08, W * .90);
+        addVehicleBox(group, materials.trim, L / 2 + .006, clearance + H * .23, 0, .015, H * .12, W * .36);
+        const headlights = [];
+        const brakes = [];
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.headLens, L / 2 + .01, clearance + H * .27, side * W * .32, .014, .09, .18);
+          headlights.push(addVehicleBox(group, materials.headlight, L / 2 + .018, clearance + H * .27, side * W * .32, .010, .07, .15));
+          addVehicleBox(group, materials.tailLens, -L / 2 - .02, clearance + H * .25, side * W * .34, .014, .09, .16);
+          brakes.push(addVehicleBox(group, materials.brakeLight, -L / 2 - .03, clearance + H * .25, side * W * .34, .010, .07, .13));
+        }
+        addVehicleBox(group, materials.plate, -L / 2 - .04, clearance + H * .13, 0, .012, .055, W * .16);
+        for (const side of [-1, 1]) addVehicleWheel(group, L * .34, side * (W / 2 - .06), H * .17, .18);
+        for (const side of [-1, 1]) {
+          addVehicleWheel(group, -L * .27, side * (W / 2 - .06), H * .17, .18);
+          addVehicleWheel(group, -L * .27, side * (W / 2 - .25), H * .17, .18);
+        }
+        headlightA = headlights[0]; headlightB = headlights[1];
+        brakeA = brakes[0]; brakeB = brakes[1];
+      } else if (type === 'semi') {
+        const clearance = H * .07;
+        const trailerY = H * .58;
+        const trailerH = H * .70;
+        body = addVehicleBox(group, paint, -L * .18, trailerY, 0, L * .64, trailerH, W);
+        for (const side of [-1, 1]) {
+          for (let index = -2; index <= 2; index += 1) {
+            addVehicleBox(group, materials.trim, -L * .18 + index * L * .12, trailerY, side * (W / 2 + .006), .022, trailerH * .88, .012);
+          }
+          addVehicleBox(group, materials.trim, -L * .18, trailerY + trailerH * .18, side * (W / 2 + .008), L * .62, .05, .012);
+        }
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.trim, -L / 2 - .008, trailerY, side * W * .22, .02, trailerH * .92, W * .44);
+        }
+        addVehicleBox(group, materials.trim, -L / 2 - .03, .30, 0, .06, .08, W * .90);
+        addVehicleBox(group, paint, L * .37, clearance + H * .32, 0, L * .22, H * .64, W * .95);
+        addVehicleBox(group, paint, L * .24, clearance + H * .28, 0, L * .10, H * .56, W * .90);
+        addVehicleBox(group, paint, L * .32, clearance + H * .68, 0, L * .18, .12, W * .90);
+        addVehicleBox(group, materials.vehicleGlass, L * .48, clearance + H * .46, 0, .02, H * .18, W * .82);
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.vehicleGlass, L * .36, clearance + H * .46, side * (W / 2 + .006), L * .13, H * .15, .02);
+          addVehicleBox(group, materials.chrome, L * .20, clearance + H * .55, side * W * .42, .05, H * .35, .05);
+          addVehicleBox(group, materials.chrome, L * .30, clearance + H * .20, side * (W / 2 + .02), L * .16, .14, .10);
+          addVehicleBox(group, materials.trim, L * .42, clearance + H * .52, side * (W / 2 + .11), .05, .17, .06);
+        }
+        addVehicleBox(group, materials.trim, L * .12, clearance + H * .22, 0, L * .12, .06, W * .55);
+        addVehicleBox(group, materials.trim, L / 2 + .02, clearance + H * .08, 0, .06, H * .10, W * .98);
+        addVehicleBox(group, materials.trim, -L / 2 - .03, .30, 0, .06, .08, W * .90);
+        addVehicleBox(group, materials.trim, L / 2 + .006, clearance + H * .19, 0, .015, H * .12, W * .36);
+        const headlights = [];
+        const brakes = [];
+        for (const side of [-1, 1]) {
+          addVehicleBox(group, materials.headLens, L / 2 + .01, clearance + H * .23, side * W * .32, .014, .09, .18);
+          headlights.push(addVehicleBox(group, materials.headlight, L / 2 + .018, clearance + H * .23, side * W * .32, .010, .07, .15));
+          addVehicleBox(group, materials.tailLens, -L / 2 - .02, clearance + H * .22, side * W * .34, .014, .09, .16);
+          brakes.push(addVehicleBox(group, materials.brakeLight, -L / 2 - .03, clearance + H * .22, side * W * .34, .010, .07, .13));
+        }
+        addVehicleBox(group, materials.plate, -L / 2 - .05, .45, 0, .012, .055, W * .16);
+        addVehicleWheel(group, L * .43, -W * .38, H * .15, .20);
+        addVehicleWheel(group, L * .43, W * .38, H * .15, .20);
+        for (const axle of [L * .17, -L * .38]) {
+          for (const side of [-1, 1]) {
+            addVehicleWheel(group, axle, side * (W / 2 - .06), H * .15, .20);
+            addVehicleWheel(group, axle, side * (W / 2 - .26), H * .15, .20);
+          }
+        }
+        headlightA = headlights[0]; headlightB = headlights[1];
+        brakeA = brakes[0]; brakeB = brakes[1];
+      } else if (type === 'motorcycle') {
+        const wheelR = H * .30;
+        const wheelWidth = .12;
+        const frontX = L * .34;
+        const rearX = -L * .34;
+        addVehicleWheel(group, frontX, 0, wheelR, wheelWidth);
+        addVehicleWheel(group, rearX, 0, wheelR, wheelWidth);
+        addVehicleBeam(group, materials.trim, new THREE.Vector3(-.10, .45, 0), new THREE.Vector3(.35, .55, 0), .07);
+        addVehicleBox(group, materials.trim, 0, .35, 0, .20, .25, .18);
+        body = addVehicleMesh(group, shared.vehicleSphere, paint, .10, .58, 0, .30, .18, .20);
+        addVehicleBox(group, materials.trim, -.28, .62, 0, .46, .08, .22);
+        for (const side of [-1, 1]) {
+          addVehicleBeam(group, materials.chrome, new THREE.Vector3(.52, .82, side * .10), new THREE.Vector3(frontX, wheelR, side * .10), .035);
+        }
+        addVehicleBox(group, materials.trim, .55, .88, 0, .04, .04, .55);
+        addVehicleBox(group, materials.headLens, .62, .74, 0, .10, .10, .12);
+        headlightA = addVehicleBox(group, materials.headlight, .64, .74, 0, .06, .08, .10);
+        headlightB = headlightA;
+        addVehicleBox(group, materials.tailLens, -.78, .62, 0, .06, .08, .10);
+        brakeA = addVehicleBox(group, materials.brakeLight, -.80, .62, 0, .04, .06, .08);
+        brakeB = brakeA;
+        addVehicleBox(group, materials.chrome, -.30, .33, -.14, .70, .06, .06);
+        const jacket = vehiclePaint(0x2b3038);
+        const torso = addVehicleBox(group, jacket, -.12, 1.05, 0, .34, .48, .32);
+        torso.rotation.z = -.22;
+        addVehicleMesh(group, shared.vehicleSphere, vehiclePaint(0xe8e4d8), .08, 1.36, 0, .16, .16, .16);
+        addVehicleBox(group, materials.vehicleGlass, .21, 1.36, 0, .04, .08, .20);
+        for (const side of [-1, 1]) {
+          addVehicleBeam(group, jacket, new THREE.Vector3(-.02, 1.20, side * .17), new THREE.Vector3(.52, .92, side * .20), .065);
+          addVehicleBeam(group, jacket, new THREE.Vector3(-.18, .82, side * .14), new THREE.Vector3(.02, .45, side * .17), .075);
+        }
       }
+
       group.userData = { definition, body, headlightA, headlightB, brakeA, brakeB, beacon };
+      mergeVehicleStaticParts(group, [headlightA, headlightB, brakeA, brakeB, beacon]);
       return group;
     }
 
     function initialiseVehicleShared() {
-      shared.vehicleBody = new THREE.BoxGeometry(1, 1, 1);
-      shared.vehicleCabin = new THREE.BoxGeometry(1, .7, 1);
-      shared.riderGeometry = new THREE.SphereGeometry(.5, 8, 6);
-      shared.wheelGeometry = new THREE.CylinderGeometry(.42, .42, .22, 10);
-      shared.lightGeometry = new THREE.BoxGeometry(.14, .12, .25);
-      shared.beaconGeometry = new THREE.BoxGeometry(.3, .14, .3);
+      shared.unitBox = new THREE.BoxGeometry(1, 1, 1);
+      shared.vehicleWheel = new THREE.CylinderGeometry(1, 1, 1, 14);
+      shared.vehicleWheel.rotateX(Math.PI / 2);
+      shared.vehicleHub = new THREE.CylinderGeometry(.55, .55, 1.06, 10);
+      shared.vehicleHub.rotateX(Math.PI / 2);
+      shared.vehicleSphere = new THREE.SphereGeometry(1, 10, 7);
+      shared.vehicleGeos = {};
+      const carOptions = {
+        compact: { clearance: .09, belt: .57, hoodDrop: .05, trunkDrop: .03, cabinFront: .15, cabinRear: .37, windshield: .17, backlight: .11, wheel: .195, axleFront: .31, axleRear: .31, cabinWidth: .80, roof: .97 },
+        sedan: { clearance: .10, belt: .58, hoodDrop: .035, trunkDrop: .03, cabinFront: .12, cabinRear: .31, windshield: .14, backlight: .13, wheel: .21, axleFront: .32, axleRear: .32, cabinWidth: .80, roof: .97 },
+        suv: { clearance: .12, belt: .62, hoodDrop: .02, trunkDrop: 0, cabinFront: .10, cabinRear: .43, windshield: .10, backlight: .015, wheel: .225, axleFront: .31, axleRear: .31, cabinWidth: .83, roof: .97 },
+        emergency: { clearance: .12, belt: .63, hoodDrop: .02, trunkDrop: 0, cabinFront: .10, cabinRear: .41, windshield: .10, backlight: .02, wheel: .225, axleFront: .31, axleRear: .31, cabinWidth: .83, roof: .97 }
+      };
+      for (const [type, options] of Object.entries(carOptions)) {
+        const definition = vehicleTypes.find((item) => item.name === type);
+        if (definition) shared.vehicleGeos[type] = buildCarGeometry(definition, options);
+      }
+      const pickup = vehicleTypes.find((item) => item.name === 'pickup');
+      if (pickup) shared.vehicleGeos.pickup = buildPickupGeometry(pickup);
+      const maintenance = vehicleTypes.find((item) => item.name === 'maintenance');
+      if (maintenance) shared.vehicleGeos.maintenance = buildPickupGeometry(maintenance);
     }
 
     function chooseVehicleType(index) {
@@ -2673,7 +3591,7 @@
       const count = Math.round(7 + state.trafficDensity * .46);
       for (let index = 0; index < count; index += 1) {
         const definitionName = chooseVehicleType(index);
-        const group = makeVehicle(definitionName);
+        const group = makeVehicle(definitionName, index);
         const direction = index % 2 === 0 ? 1 : -1;
         const lanes = direction > 0 ? [-2.7, -.9] : [.9, 2.7];
         const lane = lanes[index % lanes.length];
@@ -2684,7 +3602,7 @@
           slowing: false, seed: index * 1.79 + 4
         };
         group.userData.vehicle = vehicle;
-        group.position.set(vehicle.x, DECK_Y + 1.5, vehicle.lane);
+        group.position.set(vehicle.x, DECK_Y + DECK_TOP_OFFSET + .02, vehicle.lane);
         trafficGroup.add(group);
         vehicles.push(vehicle);
       }
@@ -2717,10 +3635,11 @@
         const onSuspensionSpan = vehicle.x >= SUSPENSION_START && vehicle.x <= SUSPENSION_END;
         const deckResponse = onSuspensionSpan ? currentResponse : { ...currentResponse, lateral: currentResponse.lateral * .25, vertical: currentResponse.vertical * .25, rotation: currentResponse.rotation * .25, longitudinal: 0 };
         const point = onSuspensionSpan ? getDeckPoint(vehicle.x, vehicle.lane, deckResponse) : approachPoint(vehicle.x, vehicle.lane, deckResponse);
+        const roadPitch = onSuspensionSpan ? 0 : approachAngle(vehicle.x);
         vehicle.group.position.copy(point);
-        vehicle.group.position.y += definition.scale[1] * .75;
+        vehicle.group.position.y += (onSuspensionSpan ? DECK_TOP_OFFSET : APPROACH_TOP_OFFSET) + .02;
         vehicle.group.rotation.y = vehicle.direction > 0 ? 0 : Math.PI;
-        vehicle.group.rotation.z = clamp(currentResponse.rotation * .015, -.08, .08);
+        vehicle.group.rotation.z = clamp(currentResponse.rotation * .015, -.08, .08) + roadPitch;
         const lightsOn = state.environment === 'night' || state.environment === 'fog' || state.windstorm || state.stormFog > 38;
         vehicle.group.userData.headlightA.visible = lightsOn && !state.disableFlashing;
         vehicle.group.userData.headlightB.visible = lightsOn && !state.disableFlashing;
@@ -2732,9 +3651,7 @@
     }
 
     function approachPoint(x, z, response) {
-      const distance = x < SUSPENSION_START ? SUSPENSION_START - x : x - SUSPENSION_END;
-      const y = DECK_Y - clamp(distance / APPROACH_LENGTH, 0, 1) * (DECK_Y - APPROACH_END_Y);
-      return new THREE.Vector3(x, y, z + response.lateral * .25);
+      return new THREE.Vector3(x, approachCenterY(x), z + response.lateral * .25);
     }
 
     function updateTrafficLabel() {
@@ -2744,6 +3661,29 @@
     }
 
     /* Weather effects */
+    function createCloudTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const context = canvas.getContext('2d');
+      const blobs = [
+        [150, 150, 120], [230, 120, 105], [315, 135, 115], [395, 160, 80],
+        [95, 170, 70], [215, 178, 90], [295, 175, 85], [455, 180, 55]
+      ];
+      for (const [x, y, radius] of blobs) {
+        const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, 'rgba(255,255,255,.62)');
+        gradient.addColorStop(.45, 'rgba(255,255,255,.30)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 512, 256);
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      return texture;
+    }
+
     function buildWeather() {
       weatherGroup = new THREE.Group();
       weatherGroup.name = 'Weather and atmosphere';
@@ -2787,18 +3727,22 @@
 
       createSeagullFlock();
 
-      for (let i = 0; i < 9; i += 1) {
-        const cloud = new THREE.Group();
-        const cloudMaterial = materials.cloud || new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
-        for (let j = 0; j < 5; j += 1) {
-          const puff = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), cloudMaterial);
-          puff.position.set(j * 10 - 20, Math.sin(j) * 2, Math.cos(j * 1.4) * 7);
-          puff.scale.set(16 + j * 2, 5 + (j % 2) * 4, 9);
-          cloud.add(puff);
-        }
-        cloud.position.set(-500 + i * 125, 125 + (i % 3) * 16, -160 + (i % 4) * 95);
+      const cloudMaterial = materials.cloud || new THREE.SpriteMaterial({ map: createCloudTexture(), color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false });
+      for (let i = 0; i < 12; i += 1) {
+        const cloud = new THREE.Sprite(cloudMaterial);
+        cloud.scale.set(190 + (i % 4) * 55, 62 + (i % 3) * 22, 1);
+        cloud.position.set(-620 + i * 112, 128 + (i % 3) * 24, -250 + (i % 5) * 115);
         cloudBank.push(cloud);
         weatherGroup.add(cloud);
+      }
+
+      const marineFogMaterial = materials.marineFog || new THREE.SpriteMaterial({ map: cloudMaterial.map, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false });
+      for (let i = 0; i < 8; i += 1) {
+        const bank = new THREE.Sprite(marineFogMaterial);
+        bank.scale.set(330 + (i % 3) * 90, 58 + (i % 2) * 22, 1);
+        bank.position.set(-660 + i * 188, 10 + (i % 3) * 7, -95 + (i % 4) * 72);
+        marineFogBank.push(bank);
+        weatherGroup.add(bank);
       }
     }
 
@@ -3008,7 +3952,11 @@
       updateSeagulls(dt, time);
       for (const cloud of cloudBank) {
         cloud.position.x += dt * (2.5 + (state.windstorm ? state.windSpeed * .045 : 0));
-        if (cloud.position.x > 560) cloud.position.x = -560;
+        if (cloud.position.x > 640) cloud.position.x = -640;
+      }
+      for (const bank of marineFogBank) {
+        bank.position.x += dt * (1.2 + (state.windstorm ? state.windSpeed * .022 : 0));
+        if (bank.position.x > 720) bank.position.x = -720;
       }
     }
 
@@ -3016,7 +3964,7 @@
     const environmentPalettes = {
       morning: { sky: 0x58a8f0, fog: 0x9eccf5, density: .0005, sun: 0xfffaec, hemi: 1.25, sunIntensity: 2.50, sunEl: 38, sunAz: 135, turbidity: 6, rayleigh: 1.2, exposure: .62, label: 'Sunny Morning', detail: 'warm California sunlight' },
       midday: { sky: 0x489ee8, fog: 0x90c4ee, density: .0004, sun: 0xffffff, hemi: 1.40, sunIntensity: 2.80, sunEl: 68, sunAz: 170, turbidity: 5, rayleigh: 1.0, exposure: .60, label: 'Clear Midday', detail: 'bright direct sunlight' },
-      golden: { sky: 0x6e95c8, fog: 0xc89e76, density: .0008, sun: 0xffb86b, hemi: 1.05, sunIntensity: 2.10, sunEl: 12, sunAz: 245, turbidity: 9, rayleigh: 2.2, exposure: .58, label: 'Golden Hour', detail: 'warm low sun' },
+      golden: { sky: 0x6e95c8, fog: 0xd8a273, density: .00035, sun: 0xffb86b, hemi: .92, sunIntensity: 2.70, sunEl: 12, sunAz: 245, turbidity: 7, rayleigh: 1.9, exposure: .58, label: 'Golden Hour', detail: 'warm low sun' },
       sunset: { sky: 0x546288, fog: 0xb56c5e, density: .0012, sun: 0xff7e4c, hemi: .80, sunIntensity: 1.60, sunEl: 4, sunAz: 262, turbidity: 10, rayleigh: 2.8, exposure: .55, label: 'Sunset', detail: 'evening glow' },
       night: { sky: 0x08131c, fog: 0x0d1822, density: .0023, sun: 0x6584aa, hemi: .35, sunIntensity: .50, sunEl: -14, sunAz: 300, turbidity: 4, rayleigh: .8, exposure: .42, label: 'Night', detail: 'bridge lighting' },
       fog: { sky: 0xb2c7cf, fog: 0xc2d2d8, density: .0045, sun: 0xe0eaf0, hemi: .85, sunIntensity: 1.00, sunEl: 30, sunAz: 150, turbidity: 12, rayleigh: .6, exposure: .55, label: 'Coastal Fog', detail: 'diffuse coastal fog' },
@@ -3028,7 +3976,202 @@
     function applyEnvironment(immediate = false) {
       targetPalette = environmentPalettes[state.environment] || environmentPalettes.morning;
       if (immediate) currentPalette = { ...targetPalette };
+      envMapDirty = true;
+      envMapRebuildAt = performance.now() + (immediate ? 0 : 900);
       updateButtons();
+    }
+
+    function rebuildEnvironmentMap() {
+      if (!renderer || !skyAvailable || !Sky) return;
+      try {
+        const envScene = new THREE.Scene();
+        const envSky = new Sky();
+        envSky.scale.setScalar(260);
+        const uniforms = envSky.material.uniforms;
+        uniforms.turbidity.value = currentPalette.turbidity ?? 6;
+        uniforms.rayleigh.value = currentPalette.rayleigh ?? 1.2;
+        uniforms.mieCoefficient.value = state.environment === 'fog' || state.environment === 'storm' ? 0.02 : 0.006;
+        uniforms.mieDirectionalG.value = 0.8;
+        uniforms.sunPosition.value.copy(sunDir);
+        uniforms.up.value.set(0, 1, 0);
+        envScene.add(envSky);
+        const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(1800, 1800),
+          new THREE.MeshBasicMaterial({ color: 0x1d6f88, side: THREE.DoubleSide, fog: false })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -20;
+        envScene.add(ground);
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const target = pmrem.fromScene(envScene, 0.035, 0.1, 1000);
+        const previous = environmentTarget;
+        environmentTarget = target;
+        scene.environment = target.texture;
+        if (previous) previous.dispose();
+        pmrem.dispose();
+        envSky.geometry.dispose();
+        envSky.material.dispose();
+        ground.geometry.dispose();
+        ground.material.dispose();
+        envMapDirty = false;
+      } catch (envError) { console.warn('Sky image-based lighting disabled', envError); }
+    }
+
+    function createSunGlow() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 128;
+        const context = canvas.getContext('2d');
+        const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gradient.addColorStop(0, 'rgba(255,248,226,1)');
+        gradient.addColorStop(.10, 'rgba(255,225,168,.95)');
+        gradient.addColorStop(.32, 'rgba(255,178,104,.28)');
+        gradient.addColorStop(1, 'rgba(255,150,70,0)');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 128, 128);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: texture, color: 0xffd9a8, transparent: true, opacity: .7,
+          depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false
+        }));
+        sunGlow.name = 'Sun glare';
+        sunGlow.scale.set(540, 540, 1);
+        sunGlow.frustumCulled = false;
+        sunGlow.renderOrder = 6;
+        scene.add(sunGlow);
+      } catch (glowError) { console.warn('Sun glare disabled', glowError); sunGlow = null; }
+    }
+
+    // Package B: two-tier adaptive shadow frustum — tight ±150 m near-field tier for
+    // truss/tower contact, blending to a wide full-span tier for overviews. The
+    // frustum follows the view target so shadows stay crisp where looked at.
+    function updateShadowRig() {
+      if (!sunLight || !sunLight.castShadow || !camera) return;
+      const focus = controls ? controls.target : null;
+      const dist = focus ? camera.position.distanceTo(focus) : 600;
+      const wide = clamp((dist - 250) / 450, 0, 1);
+      const half = lerp(150, 620, wide);
+      const cam = sunLight.shadow.camera;
+      cam.left = -half; cam.right = half;
+      cam.top = half * .75; cam.bottom = -half * .75;
+      cam.near = 50; cam.far = 1350 + wide * 500;
+      cam.updateProjectionMatrix();
+      if (focus) {
+        sunLight.target.position.copy(focus);
+        sunLight.target.updateMatrixWorld();
+      }
+      sunLight.position.copy(sunLight.target.position).addScaledVector(sunDir, 820);
+      const wantSize = state.quality === 'ultra' ? 2048 : state.quality === 'medium' ? 1024 : 2048;
+      if (sunLight.shadow.mapSize.x !== wantSize) {
+        sunLight.shadow.mapSize.set(wantSize, wantSize);
+        if (sunLight.shadow.map) { sunLight.shadow.map.dispose(); sunLight.shadow.map = null; }
+      }
+    }
+
+    // Package B: cheap contact darkening discs under towers, anchorages, and the
+    // Fort Point arch so the structure sits on the water instead of floating
+    function createContactShadows() {
+      try {
+        if (contactShadowGroup) return;
+        const size = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size / 2);
+        gradient.addColorStop(0, 'rgba(0,0,0,.55)');
+        gradient.addColorStop(.55, 'rgba(0,0,0,.28)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        const texture = new THREE.CanvasTexture(canvas);
+        contactShadowGroup = new THREE.Group();
+        contactShadowGroup.name = 'Contact shadow discs';
+        const spots = [
+          { x: -TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .5 },
+          { x: TOWER_X, z: 0, sx: 30, sz: 16, y: .8, opacity: .5 },
+          { x: -ANCHORAGE_X, z: 0, sx: 22, sz: 13, y: 1.2, opacity: .35 },
+          { x: ANCHORAGE_X, z: 0, sx: 22, sz: 13, y: 1.2, opacity: .35 }
+        ];
+        for (const spot of spots) {
+          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: spot.opacity, depthWrite: false, fog: false });
+          const disc = new THREE.Mesh(new THREE.PlaneGeometry(spot.sx, spot.sz), material);
+          disc.rotation.x = -Math.PI / 2;
+          disc.position.set(spot.x, spot.y, spot.z);
+          disc.renderOrder = 2;
+          contactShadowGroup.add(disc);
+        }
+        scene.add(contactShadowGroup);
+      } catch (contactError) { console.warn('Contact shadows skipped', contactError); }
+    }
+
+    // Package B night showpiece: tower floodlight spots + uplight cones, warm lamp
+    // pools riding the deck batches, and a city glow sprite over the skyline
+    function createNightRig() {
+      try {
+        if (floodLights.length || !towerReferences.length) return;
+        for (const { tower, x } of towerReferences) {
+          if (!tower) continue;
+          for (const side of [-1, 1]) {
+            const spot = new THREE.SpotLight(0xffb45e, 0, 300, .48, .7, 1.4);
+            spot.position.set(x + side * 14, 3, side * 10);
+            spot.target.position.set(x, TOWER_TOP_Y - 6, 0);
+            spot.castShadow = false;
+            scene.add(spot);
+            scene.add(spot.target);
+            floodLights.push(spot);
+          }
+          const coneMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffbe6e, transparent: true, opacity: 0,
+            blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false
+          });
+          const cone = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 15, TOWER_TOP_Y - 8, 12, 1, true), coneMaterial);
+          cone.position.set(0, (TOWER_TOP_Y - 8) / 2 + 2, 0);
+          cone.renderOrder = 5;
+          tower.add(cone);
+          floodCones.push(coneMaterial);
+        }
+        // Warm pools under each deck lamp; ride the deck via the batch updater
+        const poolGeometry = new THREE.PlaneGeometry(15, 7.5);
+        poolGeometry.rotateX(-Math.PI / 2);
+        const poolMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffc06a, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+        });
+        const poolItems = [];
+        for (let x = SUSPENSION_START + 25; x <= SUSPENSION_END - 25; x += 45) {
+          for (const side of [-1, 1]) poolItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .25), baseY: 1.05, index: poolItems.length });
+        }
+        lampPoolMesh = new THREE.InstancedMesh(poolGeometry, poolMaterial, poolItems.length);
+        lampPoolMesh.name = 'Night lamp pools';
+        lampPoolMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        lampPoolMesh.castShadow = false;
+        lampPoolMesh.receiveShadow = false;
+        lampPoolMesh.frustumCulled = false;
+        lampPoolMesh.renderOrder = 3;
+        bridgeGroup.add(lampPoolMesh);
+        deckBatches.push({ mesh: lampPoolMesh, items: poolItems });
+        // City glow dome over the distant skyline
+        const glowCanvas = document.createElement('canvas');
+        glowCanvas.width = glowCanvas.height = 128;
+        const glowCtx = glowCanvas.getContext('2d');
+        const glowGradient = glowCtx.createRadialGradient(64, 64, 4, 64, 64, 64);
+        glowGradient.addColorStop(0, 'rgba(255,190,120,.85)');
+        glowGradient.addColorStop(.5, 'rgba(255,160,100,.30)');
+        glowGradient.addColorStop(1, 'rgba(255,150,90,0)');
+        glowCtx.fillStyle = glowGradient;
+        glowCtx.fillRect(0, 0, 128, 128);
+        const glowTexture = new THREE.CanvasTexture(glowCanvas);
+        glowTexture.colorSpace = THREE.SRGBColorSpace;
+        cityGlowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTexture, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+        }));
+        cityGlowSprite.name = 'City glow';
+        cityGlowSprite.position.set(-1700, 90, 680);
+        cityGlowSprite.scale.set(760, 300, 1);
+        scene.add(cityGlowSprite);
+      } catch (nightError) { console.warn('Night rig skipped', nightError); }
     }
 
     function updateLighting(dt) {
@@ -3074,7 +4217,26 @@
         uniforms.mieDirectionalG.value = 0.8;
         skyMesh.material.uniforms.up.value.set(0, 1, 0);
         skyMesh.visible = state.skyOn;
+        if (reflectionSky) {
+          const source = skyMesh.material.uniforms;
+          const mirror = reflectionSky.material.uniforms;
+          mirror.sunPosition.value.copy(source.sunPosition.value);
+          mirror.turbidity.value = source.turbidity.value;
+          mirror.rayleigh.value = source.rayleigh.value;
+          mirror.mieCoefficient.value = source.mieCoefficient.value;
+          mirror.mieDirectionalG.value = source.mieDirectionalG.value;
+          mirror.up.value.set(0, 1, 0);
+          reflectionSky.visible = state.skyOn;
+        }
         if (renderer) renderer.toneMappingExposure = lerp(renderer.toneMappingExposure, currentPalette.exposure * 1.7 * (state.exposure / 100), blend);
+      }
+      if (sunGlow) {
+        const sunVisible = state.skyOn && sunDir.y > -0.015;
+        sunGlow.visible = sunVisible;
+        if (sunVisible) {
+          sunGlow.position.copy(sunDir).multiplyScalar(7000);
+          sunGlow.material.opacity = clamp(0.18 + sunDir.y * 2.4, 0.18, .72);
+        }
       }
       if (starPoints) {
         const nightFactor = clamp(-sunDir.y * 6 + 0.25, 0, 1) * (state.environment === 'night' ? 1 : 0.25);
@@ -3083,12 +4245,27 @@
       }
       if (materials.cloud) {
         materials.cloud.color.lerp(new THREE.Color(targetPalette.sun).lerp(new THREE.Color(0x8a979e), .55), blend * .5);
+        materials.cloud.opacity = lerp(materials.cloud.opacity, state.environment === 'fog' || state.environment === 'storm' ? .34 : state.environment === 'night' ? .14 : .58, blend);
+      }
+      if (materials.marineFog) {
+        materials.marineFog.color.lerp(new THREE.Color(targetPalette.fog), blend * .5);
+        materials.marineFog.opacity = lerp(materials.marineFog.opacity, state.environment === 'fog' ? .30 : state.environment === 'storm' ? .20 : state.environment === 'night' ? .04 : .10, blend);
       }
       const night = state.environment === 'night' || state.environment === 'fog' || state.environment === 'storm';
       materials.bridgeLight.emissiveIntensity = lerp(materials.bridgeLight.emissiveIntensity, night ? 3.2 : 1.0, blend);
       materials.window.emissiveIntensity = lerp(materials.window.emissiveIntensity, night ? 2.5 : .15, blend);
       if (materials.downtownHaze) materials.downtownHaze.emissiveIntensity = lerp(materials.downtownHaze.emissiveIntensity, night ? 1.1 : 0, blend);
       for (const cloud of cloudBank) cloud.visible = state.environment !== 'night' || state.windstorm;
+      for (const bank of marineFogBank) bank.visible = state.environment !== 'night' || state.windstorm;
+      // Package B: night showpiece fade + storm wet sheen + adaptive shadow frustum
+      const showpieceNight = state.environment === 'night' ? 1 : state.environment === 'sunset' ? .35 : clamp(-sunDir.y * 3 + .15, 0, .5);
+      for (const spot of floodLights) spot.intensity = lerp(spot.intensity, showpieceNight * 1500, blend);
+      for (const coneMaterial of floodCones) coneMaterial.opacity = lerp(coneMaterial.opacity, showpieceNight * .10, blend);
+      if (lampPoolMesh) lampPoolMesh.material.opacity = lerp(lampPoolMesh.material.opacity, showpieceNight * .5, blend);
+      if (cityGlowSprite) cityGlowSprite.material.opacity = lerp(cityGlowSprite.material.opacity, showpieceNight * .55, blend);
+      const stormWet = state.environment === 'storm' ? 1 : state.rain ? .4 : 0;
+      updateWetResponse(stormWet, blend);
+      updateShadowRig();
       if (waterUniforms) {
         if (waterUniforms.uSunColor) waterUniforms.uSunColor.value.lerp(new THREE.Color(targetPalette.sun), blend);
         if (waterUniforms.uSkyColor) waterUniforms.uSkyColor.value.lerp(new THREE.Color(targetPalette.sky), blend);
@@ -3098,10 +4275,11 @@
 
     /* Camera controls */
     const cameraPresets = {
+      hero: { position: [-380, 92, 640], target: [-28, 52, 0] },
       overview: { position: [-560, 170, 470], target: [0, 30, 0] },
       sf: { position: [-535, 92, 185], target: [-250, 22, 0] },
       marin: { position: [535, 100, -205], target: [250, 25, 0] },
-      fort: { position: [-300, 65, -105], target: [-245, 20, -16] },
+      fort: { position: [-296, 36, -112], target: [-275, 13, 0] },
       southTower: { position: [-285, 92, 105], target: [-210, 35, 0] },
       northTower: { position: [285, 96, -105], target: [210, 35, 0] },
       midspan: { position: [-30, 37, 28], target: [0, 25, 0] },
@@ -3116,15 +4294,13 @@
 
     function createDriverCar() {
       if (driverCar) return;
-      const car = makeVehicle('sedan');
+      const car = makeVehicle('sedan', 0, 0x4fc3f7);
       car.name = 'Driver view car';
-      // make it stand out slightly (optional tint)
-      if (car.userData && car.userData.body) car.userData.body.material = new THREE.MeshPhysicalMaterial({ color: 0x4fc3f7, roughness: .4, metalness: .15, clearcoat: .7, clearcoatRoughness: .3, envMapIntensity: .9 });
       driverCar = car;
       driverCarData = { x: SUSPENSION_START - 15, lane: -0.9, direction: 1, baseSpeed: 68 };
       const pos = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
       car.position.copy(pos);
-      car.position.y += 0.75;
+      car.position.y += DECK_TOP_OFFSET + 0.02;
       car.rotation.y = 0;
       // add to trafficGroup so it shares lighting but stays independent
       if (trafficGroup) trafficGroup.add(car);
@@ -3143,10 +4319,11 @@
       }
       const onSusp = data.x >= SUSPENSION_START && data.x <= SUSPENSION_END;
       const pt = onSusp ? getDeckPoint(data.x, data.lane, response) : approachPoint(data.x, data.lane, response);
+      const roadPitch = onSusp ? 0 : approachAngle(data.x);
       driverCar.position.copy(pt);
-      driverCar.position.y += 0.82;
+      driverCar.position.y += (onSusp ? DECK_TOP_OFFSET : APPROACH_TOP_OFFSET) + 0.02;
       driverCar.rotation.y = data.direction > 0 ? 0 : Math.PI;
-      driverCar.rotation.z = clamp(response.rotation * 0.015, -0.08, 0.08);
+      driverCar.rotation.z = clamp(response.rotation * 0.015, -0.08, 0.08) + roadPitch;
     }
 
     function updateDriverCamera() {
@@ -3154,17 +4331,17 @@
       const lane = driverCarData.lane;
       const x = driverCarData.x;
       const dir = driverCarData.direction;
-      // eye a little above roof, slightly towards center
-      const eyeOffsetY = 1.45;
-      const eye = getDeckPoint(x, lane, currentResponse);
+      const eyeOffsetY = DECK_TOP_OFFSET + 1.5;
+      const eye = getDeckPoint(x + dir * .7, lane, currentResponse);
       eye.y += eyeOffsetY;
-      // add deck lateral/torsion already in eye via getDeckPoint
-      const aheadX = x + dir * 22;
+      const aheadX = x + dir * 24;
       const ahead = getDeckPoint(aheadX, lane, currentResponse);
       ahead.y += eyeOffsetY;
-      // smooth follow: lerp camera towards eye
+      // follow tightly along the road so the car body does not sit in the near view
       camera.position.lerp(eye, 0.18);
+      camera.position.x = eye.x;
       controls.target.lerp(ahead, 0.18);
+      controls.target.x = ahead.x;
       controls.update();
     }
 
@@ -3173,10 +4350,10 @@
         isDriverView = true;
         if (!driverCar) createDriverCar();
         // place camera immediately near car then let follow take over
-        const eye = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
-        eye.y += 1.45;
-        const ahead = getDeckPoint(driverCarData.x + driverCarData.direction * 22, driverCarData.lane, currentResponse);
-        ahead.y += 1.45;
+        const eye = getDeckPoint(driverCarData.x + driverCarData.direction * .7, driverCarData.lane, currentResponse);
+        eye.y += DECK_TOP_OFFSET + 1.5;
+        const ahead = getDeckPoint(driverCarData.x + driverCarData.direction * 24, driverCarData.lane, currentResponse);
+        ahead.y += DECK_TOP_OFFSET + 1.5;
         cameraTween = null;
         if (immediate || state.reducedMotion) {
           camera.position.copy(eye);
@@ -3286,6 +4463,7 @@
 
     function updateReadouts() {
       if (!currentGroundMotion) updateSyntheticEarthquake();
+      $('environmentSelect').value = state.environment;
       if (currentGroundMotion) {
         if ($('eqArias')) $('eqArias').textContent = `${currentGroundMotion.ariasIntensity.toFixed(2)} m/s`;
         if ($('eqSigDur')) $('eqSigDur').textContent = `${currentGroundMotion.significantDuration.toFixed(1)} s`;
@@ -3392,8 +4570,8 @@
       resetPhysics(); initPhysics();
       for (const vehicle of vehicles) trafficGroup.remove(vehicle.group);
       regenerateTraffic();
-      $('presetSelect').value = 'overview';
-      setCameraPreset('overview', true);
+      $('presetSelect').value = 'hero';
+      setCameraPreset('hero', true);
       applyEnvironment(true);
       updateReadouts(); updateButtons(); updateQuality(); updateAudio();
       showToast('Scene and simulation state reset.');
@@ -3422,19 +4600,102 @@
           if (renderer.capabilities.isWebGL2) target = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType, samples: 4 });
         } catch (rtError) { target = null; }
         composer = target ? new EffectComposer(renderer, target) : new EffectComposer(renderer);
-        composer.addPass(new RenderPass(scene, camera));
+        const renderPass = new RenderPass(scene, camera);
+        const baseRender = renderPass.render.bind(renderPass);
+        renderPass.render = (...args) => {
+          baseRender(...args);
+          mainRenderCalls = renderer.info.render.calls;
+          mainRenderTriangles = renderer.info.render.triangles;
+        };
+        composer.addPass(renderPass);
+        // Package B: ground-truth AO for truss joints and tower contact (high/ultra only)
+        try {
+          if (GTAOPass) {
+            aoPass = new GTAOPass(scene, camera, width, height);
+            if (aoPass.updateGtaoMaterial) aoPass.updateGtaoMaterial({ radius: 12, distanceExponent: 1.2, thickness: 1, scale: 1, samples: 16, screenSpaceRadius: false });
+            if (typeof aoPass.updatePdMaterial === 'function') aoPass.updatePdMaterial({ lumaPhi: 12, depthPhi: 3, normalPhi: 8, radius: 7, rings: 2, samples: 16 });
+            aoPass.blendIntensity = state.quality === 'ultra' ? 1.0 : .7;
+            composer.addPass(aoPass);
+          }
+        } catch (aoPassError) { console.warn('GTAO pass disabled', aoPassError); aoPass = null; }
         // Half-res, high-threshold bloom: only true HDR highlights (sun disk, lamps) glow, never sky/water
-        bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, width / 2), Math.max(1, height / 2)), 0.1, 0.4, 1.0);
+        bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, width / 2), Math.max(1, height / 2)), 0.12, 0.45, 1.0);
         composer.addPass(bloomPass);
         composer.addPass(new OutputPass());
+        // Filmic grade in display space: subtle vignette, saturation, contrast, and grain
+        gradePass = new ShaderPass({
+          uniforms: {
+            tDiffuse: { value: null },
+            uTime: { value: 0 },
+            uVignette: { value: .32 },
+            uGrain: { value: .028 },
+            uSaturation: { value: 1.16 },
+            uContrast: { value: 1.10 }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform sampler2D tDiffuse;
+            uniform float uTime;
+            uniform float uVignette;
+            uniform float uGrain;
+            uniform float uSaturation;
+            uniform float uContrast;
+            varying vec2 vUv;
+            float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+            void main() {
+              vec3 color = texture2D(tDiffuse, vUv).rgb;
+              float luma = dot(color, vec3(.2126, .7152, .0722));
+              color = mix(vec3(luma), color, uSaturation);
+              color = (color - .5) * uContrast + .5;
+              float edge = length(vUv - .5);
+              float vignette = 1.0 - smoothstep(.28, .82, edge) * uVignette;
+              color *= vignette;
+              color += (hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 31.7) - .5) * uGrain;
+              gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+            }
+          `
+        });
+        composer.addPass(gradePass);
         composerReady = true;
         updateQuality();
-      } catch (postInitError) { console.warn('Post-processing disabled', postInitError); composer = null; bloomPass = null; }
+      } catch (postInitError) { console.warn('Post-processing disabled', postInitError); composer = null; bloomPass = null; gradePass = null; aoPass = null; }
+    }
+
+    function renderReflection() {
+      if (!reflectionRT || !reflectionScene || !renderer || !camera || !waterUniforms) return;
+      if (state.quality === 'low' || !state.skyOn) {
+        waterUniforms.uHasReflection.value = 0;
+        return;
+      }
+      reflectionFrame += 1;
+      if (state.quality === 'medium' && reflectionFrame % 2 !== 0) return;
+      const previousTarget = renderer.getRenderTarget();
+      const previousToneMapping = renderer.toneMapping;
+      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.setRenderTarget(reflectionRT);
+      renderer.clear();
+      renderer.render(reflectionScene, camera);
+      renderer.setRenderTarget(previousTarget);
+      renderer.toneMapping = previousToneMapping;
+      waterUniforms.uHasReflection.value = 1;
     }
 
     function renderFrame() {
-      if (composerReady && composer && state.quality !== 'low' && state.bloom && state.bloomStrength > 0) composer.render();
-      else renderer.render(scene, camera);
+      renderReflection();
+      if (composerReady && composer && state.quality !== 'low') {
+        if (gradePass) gradePass.uniforms.uTime.value = performance.now() * .001;
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+        mainRenderCalls = renderer.info.render.calls;
+        mainRenderTriangles = renderer.info.render.triangles;
+      }
     }
 
     function updateQuality() {
@@ -3447,7 +4708,15 @@
         composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, config.pixelRatio));
         if (bloomPass) {
           const qualityFactor = state.quality === 'ultra' ? 1.3 : state.quality === 'medium' ? .7 : 1;
+          bloomPass.enabled = state.bloom && state.bloomStrength > 0;
           bloomPass.strength = (state.bloom ? state.bloomStrength / 100 : 0) * .5 * qualityFactor;
+          bloomPass.radius = .45;
+          bloomPass.threshold = .92;
+        }
+        if (gradePass) gradePass.enabled = true;
+        if (aoPass) {
+          aoPass.enabled = state.quality === 'high' || state.quality === 'ultra';
+          aoPass.blendIntensity = state.quality === 'ultra' ? 1.0 : .7;
         }
       }
       if (rainPoints) rainPoints.geometry.setDrawRange(0, config.particles);
@@ -3458,12 +4727,11 @@
       const output = $('diagnosticsOutput');
       if (!$('diagnosticsToggle').checked) { output.hidden = true; return; }
       output.hidden = false;
-      const info = renderer ? renderer.info : null;
       output.textContent = [
         `renderer: ${renderer ? renderer.capabilities.maxTextures + ' textures / WebGL ' + renderer.capabilities.isWebGL2 : 'unavailable'}`,
         `objects: ${scene ? scene.children.length + ' root groups' : '--'}`,
-        `triangles: ${info ? info.render.triangles.toLocaleString() : '--'}`,
-        `draw calls: ${info ? info.render.calls : '--'}`,
+        `triangles: ${mainRenderTriangles.toLocaleString()}`,
+        `draw calls: ${mainRenderCalls}`,
         `active vehicles: ${vehicles.length}`,
         `active particles: ${rainPoints && rainPoints.visible ? rainPoints.geometry.drawRange.count : 0}`,
         `average frame rate: ${fps.toFixed(1)} fps`,
@@ -3480,6 +4748,10 @@
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
       if (composer) composer.setSize(width, height);
+      if (reflectionRT) {
+        const buffer = renderer.getDrawingBufferSize(new THREE.Vector2());
+        reflectionRT.setSize(Math.max(1, Math.floor(buffer.x * .5)), Math.max(1, Math.floor(buffer.y * .5)));
+      }
     }
 
     function updateScene(dt, now) {
@@ -3497,6 +4769,7 @@
         updateBoats(dt, time);
         if (waterUniforms) { waterUniforms.uTime.value = time; waterUniforms.uWind.value = clamp(response.gust / 200, 0, 1); }
         updateLighting(dt);
+        if (envMapDirty && now >= envMapRebuildAt) rebuildEnvironmentMap();
         updateCameraTween(now);
         if (isDriverView) {
           if (!cameraTween) updateDriverCamera();
@@ -3702,7 +4975,7 @@
       $('overlayToggle').addEventListener('change', (event) => { state.overlay = event.target.checked; });
       $('vectorsToggle').addEventListener('change', (event) => { state.vectors = event.target.checked; });
       $('presetSelect').addEventListener('change', (event) => setCameraPreset(event.target.value));
-      $('cameraResetButton').addEventListener('click', () => { $('presetSelect').value = 'overview'; setCameraPreset('overview'); });
+      $('cameraResetButton').addEventListener('click', () => { $('presetSelect').value = 'hero'; setCameraPreset('hero'); });
       $('autorotateButton').addEventListener('click', () => { state.autorotate = !state.autorotate; updateButtons(); });
       $('cameraShakeRange').addEventListener('input', (event) => { state.cameraShakeIntensity = Number(event.target.value); updateReadouts(); });
       $('muteButton').addEventListener('click', () => { ensureAudio(); if (audio) { audio.muted = !audio.muted; $('muteButton').textContent = audio.muted ? 'Unmute Audio' : 'Mute Audio'; updateAudio(); } });
@@ -3732,7 +5005,7 @@
       $('expandRailBtn')?.addEventListener('click', () => { rail.classList.remove('is-collapsed'); syncWorkspace(); showToast('Controls shown.'); });
       $('collapseInspectorBtn')?.addEventListener('click', () => { inspector.classList.add('is-collapsed'); syncWorkspace(); showToast('Panel hidden — simulation expanded.'); });
       $('expandInspectorBtn')?.addEventListener('click', () => { inspector.classList.remove('is-collapsed'); syncWorkspace(); showToast('Panel shown.'); });
-      document.addEventListener('keydown', (event) => { if (event.target.matches('input, select, textarea')) return; if (event.code === 'Space') { event.preventDefault(); state.trafficPaused = !state.trafficPaused; updateButtons(); } if (event.key.toLowerCase() === 'r') { $('presetSelect').value = 'overview'; setCameraPreset('overview'); } });
+      document.addEventListener('keydown', (event) => { if (event.target.matches('input, select, textarea')) return; if (event.code === 'Space') { event.preventDefault(); state.trafficPaused = !state.trafficPaused; updateButtons(); } if (event.key.toLowerCase() === 'r') { $('presetSelect').value = 'hero'; setCameraPreset('hero'); } });
       document.addEventListener('pointerdown', () => ensureAudio(), { once: true, passive: true });
       document.addEventListener('visibilitychange', () => { state.visibility = !document.hidden; if (audio && document.hidden && audio.context.state === 'running') audio.context.suspend(); });
       window.addEventListener('resize', onResize, { passive: true });
@@ -3774,11 +5047,11 @@
       scene.background = new THREE.Color(0x58a8f0);
       scene.fog = new THREE.FogExp2(0x9eccf5, 0.0005);
       camera = new THREE.PerspectiveCamera(45, 1, 1, 10000);
-      camera.position.set(-560, 170, 470);
+      camera.position.set(-380, 92, 640);
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = .075;
-      controls.target.set(0, 30, 0);
+      controls.target.set(-28, 52, 0);
       controls.minDistance = 18;
       controls.maxDistance = 1600;
       controls.maxPolarAngle = Math.PI * .49;
@@ -3791,7 +5064,9 @@
       sunLight.shadow.camera.left = -560; sunLight.shadow.camera.right = 560; sunLight.shadow.camera.top = 460; sunLight.shadow.camera.bottom = -460;
       sunLight.shadow.bias = -0.0001;
       sunLight.shadow.normalBias = 0.02;
+      sunLight.target.position.set(0, 20, 0);
       scene.add(sunLight);
+      scene.add(sunLight.target);
       hemiLight = new THREE.HemisphereLight(0xbfe0ff, 0x455c4d, 1.25);
       scene.add(hemiLight);
       fillLight = new THREE.DirectionalLight(0xa5d6ff, 0.55); fillLight.position.set(260, 180, -240); scene.add(fillLight);
@@ -3803,14 +5078,8 @@
           skyMesh.scale.setScalar(8500);
           skyMesh.name = 'Physical sky dome';
           scene.add(skyMesh);
+          createSunGlow();
         } catch (skyError) { console.warn('Sky dome disabled', skyError); skyMesh = null; }
-      }
-      if (skyAvailable && RoomEnvironment) {
-        try {
-          const pmrem = new THREE.PMREMGenerator(renderer);
-          scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
-          pmrem.dispose();
-        } catch (envError) { console.warn('Image-based lighting disabled', envError); }
       }
       try {
         const starCount = 700;
@@ -3835,10 +5104,12 @@
       materials.orangeSteel = makeMaterial('orangeSteel', { color: 0xee4d24, roughness: .38, metalness: .28 });
       materials.orangeDark = makeMaterial('orangeDark', { color: 0xad321a, roughness: .48, metalness: .25 });
       materials.orangeHot = makeMaterial('orangeHot', { color: 0xff6e3c, roughness: .34, metalness: .28 });
+      materials.trussLateral = makeMaterial('trussLateral', { color: 0xad321a, roughness: .48, metalness: .25, transparent: true, opacity: .45, depthWrite: false });
       materials.anchorageConcrete = makeMaterial('anchorageConcrete', { color: 0x9da4a8, roughness: 0.85, metalness: 0.05 });
       materials.anchorageRoof = makeMaterial('anchorageRoof', { color: 0x7e858a, roughness: 0.90 });
       materials.cable = makeMaterial('cable', { color: 0xc88255, roughness: .42, metalness: .30 });
       materials.asphalt = makeMaterial('asphalt', { color: 0x2e383d, roughness: .85, metalness: .04 });
+      materials.roadSurface = makeMaterial('roadSurface', { color: 0x5f6468, roughness: .92 });
       materials.laneWhite = makeMaterial('laneWhite', { color: 0xe6ede5, roughness: .60 });
       materials.laneYellow = makeMaterial('laneYellow', { color: 0xf2ce68, roughness: .55 });
       materials.sidewalk = makeMaterial('sidewalk', { color: 0x96a09e, roughness: .78 });
@@ -3899,14 +5170,29 @@
       materials.wake = new THREE.MeshStandardMaterial({ color: 0xd8f1f8, transparent: true, opacity: .42, roughness: .4, depthWrite: false });
       materials.vehicleGlass = makeMaterial('vehicleGlass', { color: 0x1f3e49, roughness: .18, metalness: .3 });
       materials.tire = makeMaterial('tire', { color: 0x141a1b, roughness: .94 });
+      materials.hub = makeMaterial('hub', { color: 0xb9c0c6, roughness: .32, metalness: .75 });
+      materials.trim = makeMaterial('trim', { color: 0x22272b, roughness: .55, metalness: .2 });
+      materials.chrome = makeMaterial('chrome', { color: 0xd7dde2, roughness: .16, metalness: .95 });
+      materials.plate = makeMaterial('plate', { color: 0xe7e5d8, roughness: .55 });
+      materials.headLens = makeMaterial('headLens', { color: 0xdfe6df, roughness: .25, metalness: .1 });
+      materials.tailLens = makeMaterial('tailLens', { color: 0x5e1714, roughness: .35 });
+      materials.headlight = new THREE.MeshStandardMaterial({ color: 0xfff2c4, emissive: 0xffd270, emissiveIntensity: 2.2 });
+      materials.brakeLight = new THREE.MeshStandardMaterial({ color: 0x8e211b, emissive: 0xff2a1c, emissiveIntensity: 2.2 });
+      materials.amberLight = new THREE.MeshStandardMaterial({ color: 0xffb23c, emissive: 0xff8a13, emissiveIntensity: 2.6 });
+      materials.blueLight = new THREE.MeshStandardMaterial({ color: 0x3a67ff, emissive: 0x1d3cff, emissiveIntensity: 2.6 });
+      materials.busSign = new THREE.MeshStandardMaterial({ color: 0xf4e6b0, emissive: 0x7a5a17, emissiveIntensity: .5 });
       materials.emergencyLight = new THREE.MeshStandardMaterial({ color: 0xff4035, emissive: 0xff2016, emissiveIntensity: 3 });
-      materials.cloud = new THREE.MeshStandardMaterial({ color: 0xcad7d1, transparent: true, opacity: .24, roughness: 1, depthWrite: false });
+      const cloudTexture = createCloudTexture();
+      materials.cloudTexture = cloudTexture;
+      materials.cloud = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false, fog: true });
+      materials.marineFog = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false, fog: true });
       // Balance image-based lighting so the stylized palette keeps its art direction
       try {
         const envBalance = {
-          orangeSteel: .65, orangeDark: .5, orangeHot: .7, cable: 1.0, asphalt: .25,
-          building: .5, pyramid: .8, salesforce: 1.1, vehicleGlass: 1.2, sail: .3,
-          water: .0, foam: .4, wake: .4, window: .8, bridgeLight: .4
+          orangeSteel: 1.15, orangeDark: .9, orangeHot: 1.15, cable: 1.35, asphalt: .35,
+          roadSurface: .5, building: .7, pyramid: 1.0, salesforce: 1.3, vehicleGlass: 1.4, chrome: 1.5,
+          lampPole: .8, sail: .35,
+          water: .0, foam: .4, wake: .4, window: .9, bridgeLight: .5
         };
         for (const [name, material] of Object.entries(materials)) {
           if (material && 'envMapIntensity' in material) material.envMapIntensity = envBalance[name] ?? .55;
@@ -3917,6 +5203,10 @@
       buildWater();
       buildEnvironment();
       buildBridge();
+      buildReflection();
+      applyStructureWeathering();
+      createContactShadows();
+      createNightRig();
       trafficGroup = new THREE.Group(); trafficGroup.name = 'Pooled traffic system'; scene.add(trafficGroup);
       buildWeather();
       regenerateTraffic();
@@ -3924,6 +5214,8 @@
       updateSyntheticEarthquake();
       initPhysics();
       applyEnvironment(true);
+      updateLighting(1);
+      rebuildEnvironmentMap();
       updateQuality();
       initPost();
       onResize();
