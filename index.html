@@ -3774,7 +3774,7 @@
 
       createSeagullFlock();
 
-      const cloudMaterial = materials.cloud || new THREE.SpriteMaterial({ map: createCloudTexture(), color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false });
+      const cloudMaterial = materials.cloud || new THREE.SpriteMaterial({ map: createCloudTexture(), color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false, fog: false });
       for (let i = 0; i < 12; i += 1) {
         const cloud = new THREE.Sprite(cloudMaterial);
         cloud.scale.set(190 + (i % 4) * 55, 62 + (i % 3) * 22, 1);
@@ -3783,7 +3783,7 @@
         weatherGroup.add(cloud);
       }
 
-      const marineFogMaterial = materials.marineFog || new THREE.SpriteMaterial({ map: cloudMaterial.map, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false });
+      const marineFogMaterial = materials.marineFog || new THREE.SpriteMaterial({ map: cloudMaterial.map, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false, fog: false });
       for (let i = 0; i < 8; i += 1) {
         const bank = new THREE.Sprite(marineFogMaterial);
         bank.scale.set(330 + (i % 3) * 90, 58 + (i % 2) * 22, 1);
@@ -5230,8 +5230,8 @@
       materials.emergencyLight = new THREE.MeshStandardMaterial({ color: 0xff4035, emissive: 0xff2016, emissiveIntensity: 3 });
       const cloudTexture = createCloudTexture();
       materials.cloudTexture = cloudTexture;
-      materials.cloud = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false, fog: true });
-      materials.marineFog = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false, fog: true });
+      materials.cloud = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xcad7d1, transparent: true, opacity: .58, depthWrite: false, fog: false });
+      materials.marineFog = new THREE.SpriteMaterial({ map: cloudTexture, color: 0xd8d2c4, transparent: true, opacity: .10, depthWrite: false, fog: false });
       // Balance image-based lighting so the stylized palette keeps its art direction
       try {
         const envBalance = {
