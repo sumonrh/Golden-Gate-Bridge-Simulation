@@ -697,7 +697,7 @@
           <details class="panel">
             <summary>Help and Assumptions</summary>
             <div class="panel-body">
-              <p class="section-note"><strong>Interpretation:</strong> The bridge is scaled at 0.1 scene units per foot from published Golden Gate dimensions: 4,200 ft main span, 1,125 ft side spans, 746 ft towers above water, 220 ft roadway clearance, and a 90 ft deck. The main cables are seated at the 746 ft tower tops; the published 500 ft tower-above-roadway figure is a separate rounded reference datum. The 470 ft main-cable sag is a profile-based modeling assumption. The stiffening truss is modelled as dual 25 ft-deep (7.6 m) Warren trusses with verticals at 50 ft (15.24 m) hanger spacing — top/bottom chords, verticals, alternating diagonals, floor beams at each panel, and top/bottom lateral bracing (bottom X-bracing added 1953-54) — spaced 90 ft apart in the cable planes, with suspenders transferring deck load from floor-beam panel points to the main cables. The south (city) approach includes the Fort Point Arch: a two-hinged steel arch 319 ft 7 in. between bearings with a 113 ft rise, four ribs (inner pair 42 ft 6 in. apart, outer ribs 30 ft outside), and a roadway 185 ft above its springing line (Report of the Chief Engineer, 1937).</p>
+              <p class="section-note"><strong>Interpretation:</strong> The bridge is scaled at 0.1 scene units per foot from published Golden Gate dimensions: 4,200 ft main span, 1,125 ft side spans, 746 ft towers above water, 220 ft roadway clearance, and a 90 ft deck. The main cables are seated at the 746 ft tower tops; the published 500 ft tower-above-roadway figure is a separate rounded reference datum. The 470 ft main-cable sag is a profile-based modeling assumption. The stiffening truss is modelled as dual 25 ft-deep (7.6 m) Warren trusses with verticals at 50 ft (15.24 m) hanger spacing — top/bottom chords, verticals, alternating diagonals, floor beams at each panel, and top/bottom lateral bracing (bottom X-bracing added 1953-54) — spaced 90 ft apart in the cable planes, with suspenders transferring deck load from floor-beam panel points to the main cables. The south (city) approach includes the Fort Point Arch: a two-hinged steel arch 319 ft 7 in. between bearings with a 113 ft rise, four ribs (inner pair 42 ft 6 in. apart, outer ribs 30 ft outside), and a roadway 185 ft above its springing line (Report of the Chief Engineer, 1937). Both towers stand on battered concrete piers 140 ft across the bridge and 66 ft along the channel at the top; the south pier is founded 110 ft below water inside its 300 x 155 ft elliptical fender, while the Marin pier sits at Lime Point on a 160 x 80 ft base only 20 ft below water (USNI Proceedings, 1935; GGB construction statistics). The median carries the 12 in. x 32 in. steel-clad movable barrier (3,200 linked units) across the bridge and approaches, and the deck edges use the original red steel railing. The south approach continues past the abutment on the Presidio Parkway viaduct into a twin-bore tunnel, so vehicles stay on the roadway.</p>
               <p class="small-copy">Hazards are deterministic teaching aids. Displayed deformation is not measured performance. The model includes below-water tower foundations but omits soil-structure interaction, aeroelastic stability, detailed traffic rules, local bathymetry, and certified material properties.</p>
               <p class="small-copy">Keyboard: <span class="kbd">Tab</span> focus controls, <span class="kbd">Enter</span> activate, <span class="kbd">R</span> reset camera, <span class="kbd">Space</span> pause traffic.</p>
             </div>
@@ -896,18 +896,52 @@
     const ANCHORAGE_CABLE_Y = DECK_Y + 4;
     const APPROACH_END_Y = 16;
     const APPROACH_LENGTH = BRIDGE_HALF_LENGTH - ANCHORAGE_X;
+    // The city approach continues beyond the bridge abutment like the real Presidio
+    // Parkway: it descends on the south approach viaduct, reaches grade, and enters
+    // a tunnel under the Presidio. The Marin approach still ends at the bridge limit.
+    const CITY_APPROACH_EXTENSION_END_X = -690;
+    const CITY_APPROACH_EXTENSION_END_Y = 2;
+    const CITY_APPROACH_EXTENSION_LENGTH = Math.abs(CITY_APPROACH_EXTENSION_END_X + BRIDGE_HALF_LENGTH);
+    const CITY_APPROACH_END_SLOPE = 2 * (DECK_Y - APPROACH_END_Y) / APPROACH_LENGTH;
+    const CITY_TUNNEL_PORTAL_X = CITY_APPROACH_EXTENSION_END_X;
+    const CITY_TUNNEL_END_X = -780;
+    const CITY_TRAFFIC_WRAP_X = -770;
     // Eased approach profile (see retrofit elevation schematic): level tangent at the
     // suspension line so the deck runs out with no kink, then a gentle quadratic fall
-    // to APPROACH_END_Y at the toe. All approach geometry keys off these helpers.
+    // to APPROACH_END_Y at the toe. The city extension is a cubic Hermite that leaves
+    // the toe at the same grade and eases to level at the tunnel portal.
     const approachS = (x) => clamp((Math.abs(x) - ANCHORAGE_X) / APPROACH_LENGTH, 0, 1);
-    const approachCenterY = (x) => DECK_Y - (DECK_Y - APPROACH_END_Y) * approachS(x) ** 2;
-    const approachAngle = (x) => (x < 0 ? 1 : -1) * Math.atan(2 * (DECK_Y - APPROACH_END_Y) * approachS(x) / APPROACH_LENGTH);
-    // Grade under the approaches: natural grade, buried anchorage caps, and grassed
-    // embankment banks that rise to meet the road at each toe.
+    const cityApproachT = (x) => clamp((-x - BRIDGE_HALF_LENGTH) / CITY_APPROACH_EXTENSION_LENGTH, 0, 1);
+    const cityApproachSlope = (x) => {
+      const t = cityApproachT(x);
+      if (t >= 1) return 0;
+      const h00 = 6 * t * t - 6 * t;
+      const h10 = 3 * t * t - 4 * t + 1;
+      const h01 = -6 * t * t + 6 * t;
+      const dyDt = h00 * APPROACH_END_Y + h10 * (-CITY_APPROACH_END_SLOPE * CITY_APPROACH_EXTENSION_LENGTH) + h01 * CITY_APPROACH_EXTENSION_END_Y;
+      return dyDt / (CITY_APPROACH_EXTENSION_END_X + BRIDGE_HALF_LENGTH);
+    };
+    const approachCenterY = (x) => {
+      if (x < -BRIDGE_HALF_LENGTH) {
+        const t = cityApproachT(x);
+        const h00 = 2 * t ** 3 - 3 * t ** 2 + 1;
+        const h10 = t ** 3 - 2 * t ** 2 + t;
+        const h01 = -2 * t ** 3 + 3 * t ** 2;
+        return h00 * APPROACH_END_Y + h10 * (-CITY_APPROACH_END_SLOPE * CITY_APPROACH_EXTENSION_LENGTH) + h01 * CITY_APPROACH_EXTENSION_END_Y;
+      }
+      return DECK_Y - (DECK_Y - APPROACH_END_Y) * approachS(x) ** 2;
+    };
+    const approachAngle = (x) => {
+      if (x < -BRIDGE_HALF_LENGTH) return Math.atan(cityApproachSlope(x));
+      return (x < 0 ? 1 : -1) * Math.atan(2 * (DECK_Y - APPROACH_END_Y) * approachS(x) / APPROACH_LENGTH);
+    };
+    // Grade under the approaches: natural grade, buried anchorage caps, and the
+    // grassed embankment bank that still grounds the Marin toe.
     const approachGroundY = (x) => {
       const ax = Math.abs(x);
+      if (x < -BRIDGE_HALF_LENGTH) return 1.5;
       if (ax >= ANCHORAGE_X - 4 && ax <= ANCHORAGE_X + 32) return 2;
-      if (ax >= 400) return Math.min(3 + ((ax - 400) / 52) * 10.2, 13.4);
+      if (x > 0 && ax >= 400) return Math.min(3 + ((ax - 400) / 52) * 10.2, 13.4);
       return 1.5;
     };
     const DECK_TOP_OFFSET = .85; // grey wearing-surface top, flush with the approach slabs
@@ -928,8 +962,9 @@
     const OVERLAY_NODE_STEP = SUSPENSION_LENGTH / (OVERLAY_NODE_COUNT - 1);
     const WEATHER_X_HALF_WIDTH = BRIDGE_HALF_LENGTH + 50;
     const TRAFFIC_LIMIT = BRIDGE_HALF_LENGTH + 35;
-    const POSITIVE_TRAFFIC_LANES = [-2.7, -.9];
-    const NEGATIVE_TRAFFIC_LANES = [.9, 2.7];
+    // Right-hand traffic: +x travel uses +z lanes, -x travel uses -z lanes.
+    const POSITIVE_TRAFFIC_LANES = [.825, 2.475];
+    const NEGATIVE_TRAFFIC_LANES = [-2.475, -.825];
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const defaults = {
@@ -966,7 +1001,7 @@
     let trussGroup, trussMembers = [], trussBatches = [];
     let reflectionRT = null, reflectionScene = null, reflectionSky = null, reflectionProxy = null;
     let reflectionFrame = 0;
-    let deckCenterLine, deckNodes, displacementVectors;
+    let deckCenterLine, displacementVectors;
     let towerReferences = [];
     let rainPoints, rainPositions, dustPoints, dustPositions;
     let seagullGroup, seagulls = [];
@@ -1336,7 +1371,10 @@
       shared.trussGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 1.2, 1.1);
       shared.laneGeometry = new THREE.BoxGeometry(6.5, .06, .12);
       shared.sidewalkGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .42, 1.2);
-      shared.barrierGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, 2.2, .36);
+      // Original red steel deck railing: top rail, two lower rails, and posts.
+      shared.railingTopGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .14, .16);
+      shared.railingRailGeometry = new THREE.BoxGeometry(DECK_SEGMENT_STEP + .5, .1, .1);
+      shared.railingPostGeometry = new THREE.BoxGeometry(.16, 1.5, .16);
       shared.poleGeometry = new THREE.CylinderGeometry(.14, .19, 8.5, 8);
       shared.lampGeometry = new THREE.SphereGeometry(.42, 8, 6);
       shared.anchorGeometry = new THREE.BoxGeometry(25, 20, 14);
@@ -1356,30 +1394,45 @@
         return mesh;
       }
 
-      const deckItems = [], roadItems = [], sidewalkItems = [], barrierItems = [];
+      const deckItems = [], roadItems = [], sidewalkItems = [];
+      const topRailItems = [], lowerRailItems = [], postItems = [];
       for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += DECK_SEGMENT_STEP) {
         deckItems.push({ centerX: x, baseZ: 0, baseY: 0 });
         roadItems.push({ centerX: x, baseZ: 0, baseY: .76 });
         for (const side of [-1, 1]) {
           sidewalkItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .6), baseY: 1.05 });
-          barrierItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .25), baseY: 1.7 });
+          const railZ = side * (DECK_WIDTH / 2 - .1);
+          topRailItems.push({ centerX: x, baseZ: railZ, baseY: 2.5 });
+          lowerRailItems.push({ centerX: x, baseZ: railZ, baseY: 1.85 }, { centerX: x, baseZ: railZ, baseY: 1.25 });
         }
+      }
+      for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += 5) {
+        for (const side of [-1, 1]) postItems.push({ centerX: x, baseZ: side * (DECK_WIDTH / 2 - .1), baseY: 1.8 });
       }
       addDeckBatch(shared.deckGeometry, materials.orangeSteel, deckItems, 'Instanced deck segments');
       addDeckBatch(shared.roadGeometry, materials.roadSurface, roadItems, 'Instanced wearing surface');
       addDeckBatch(shared.sidewalkGeometry, materials.sidewalk, sidewalkItems, 'Instanced sidewalks');
-      addDeckBatch(shared.barrierGeometry, materials.orangeSteel, barrierItems, 'Instanced barriers');
+      addDeckBatch(shared.railingTopGeometry, materials.orangeSteel, topRailItems, 'Instanced railing top rails');
+      addDeckBatch(shared.railingRailGeometry, materials.orangeSteel, lowerRailItems, 'Instanced railing lower rails');
+      addDeckBatch(shared.railingPostGeometry, materials.orangeSteel, postItems, 'Instanced railing posts');
       createStiffeningTruss();
 
       const whiteStripeItems = [], yellowStripeItems = [];
-      for (const [index, z] of [-2.7, -.9, .9, 2.7].entries()) {
+      for (const z of [-3.3, -1.65, 1.65, 3.3]) {
         for (let x = SUSPENSION_START + 8; x <= SUSPENSION_END - 8; x += 15) {
-          const item = { centerX: x, baseZ: z, baseY: .88 };
-          if (index === 1) yellowStripeItems.push(item); else whiteStripeItems.push(item);
+          whiteStripeItems.push({ centerX: x, baseZ: z, baseY: .88 });
         }
       }
+      for (let x = SUSPENSION_START + 8; x <= SUSPENSION_END - 8; x += 15) {
+        yellowStripeItems.push({ centerX: x, baseZ: -.2, baseY: .88 });
+      }
       addDeckBatch(shared.laneGeometry, materials.laneWhite, whiteStripeItems, 'Instanced white lane markings');
-      addDeckBatch(shared.laneGeometry, materials.laneYellow, yellowStripeItems, 'Instanced yellow lane markings');
+      addDeckBatch(new THREE.BoxGeometry(15.05, .06, .12), materials.laneYellow, yellowStripeItems, 'Instanced yellow centreline');
+      const medianItems = [];
+      for (let x = SUSPENSION_START; x <= SUSPENSION_END + .001; x += 1.5) {
+        medianItems.push({ centerX: x, baseZ: 0, baseY: 1.175 });
+      }
+      addDeckBatch(createMedianBarrierGeometry(1.45), materials.anchorageConcrete, medianItems, 'Instanced median barrier');
 
       [-TOWER_X, TOWER_X].forEach((x) => createTower(x));
       createAnchorages();
@@ -1515,6 +1568,40 @@
       for (const batch of trussBatches) batch.mesh.instanceMatrix.needsUpdate = true;
     }
 
+    function createTaperedPier(parent, bottomY, topY, bottomHalfX, bottomHalfZ, topHalfX, topHalfZ, material) {
+      // Battered concrete pier: the published GGB piers are much wider across the
+      // bridge (supporting the two legs) than along the channel.
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const position = geometry.attributes.position;
+      for (let i = 0; i < position.count; i += 1) {
+        const t = position.getY(i) + .5;
+        position.setX(i, Math.sign(position.getX(i)) * lerp(bottomHalfX, topHalfX, t));
+        position.setY(i, lerp(bottomY, topY, t));
+        position.setZ(i, Math.sign(position.getZ(i)) * lerp(bottomHalfZ, topHalfZ, t));
+      }
+      position.needsUpdate = true;
+      geometry.computeVertexNormals();
+      const pier = new THREE.Mesh(geometry, material);
+      pier.castShadow = true;
+      pier.receiveShadow = true;
+      parent.add(pier);
+      return pier;
+    }
+
+    function createMedianBarrierGeometry(length) {
+      // 12 in wide x 32 in high steel-clad movable median barrier, scaled to
+      // read clearly beside the model's oversized vehicles.
+      const geometry = new THREE.BoxGeometry(length, .65, .3);
+      const position = geometry.attributes.position;
+      for (let i = 0; i < position.count; i += 1) {
+        const t = position.getY(i) + .5;
+        position.setZ(i, Math.sign(position.getZ(i)) * lerp(.15, .09, t));
+      }
+      position.needsUpdate = true;
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
     function createTower(x) {
       const tower = new THREE.Group();
       tower.name = x < 0 ? 'South Tower' : 'North Tower';
@@ -1553,17 +1640,23 @@
         const beam = createBox(tower, new THREE.BoxGeometry(1.7, .55, TOWER_LEG_Z * 2 + 1), materials.orangeSteel, 0, y, 0);
         beam.castShadow = true;
       }
-      // Concrete pier + footing; elliptical ship fender on the south (ocean-side) tower
-      const pier = createBox(tower, new THREE.BoxGeometry(14, 15.4, 6.6), materials.anchorageConcrete, 0, -3.3, 0);
-      pier.receiveShadow = true;
-      createBox(tower, new THREE.BoxGeometry(15.5, 3, 7.8), materials.anchorageRoof, 0, -9.5, 0);
+      // Concrete piers. Published dimensions: both piers are 140 ft across the
+      // bridge and 66 ft along the channel at the top (the old boxes had these
+      // swapped, so the legs overhung the pier). The south pier is founded 110 ft
+      // below water on a 180 x 90 ft base and is ringed by the elliptical fender.
+      // The Marin pier sits at Lime Point on a 160 x 80 ft base only 20 ft below
+      // water, with no fender (USNI Proceedings, 1935; GGB construction stats).
       if (x < 0) {
-        const fenderGeo = new THREE.CylinderGeometry(15, 15, 5, 40, 1, true);
+        createTaperedPier(tower, -11, 4.4, 4.5, 9, 3.3, 7, materials.anchorageConcrete);
+        const fenderGeo = new THREE.CylinderGeometry(15, 15, 4.5, 40, 1, true);
         fenderGeo.scale(1, 1, .52);
         const fender = new THREE.Mesh(fenderGeo, materials.anchorageConcrete);
-        fender.position.set(0, .5, 0);
+        fender.position.set(0, -.75, 0);
+        fender.castShadow = true;
         fender.receiveShadow = true;
         tower.add(fender);
+      } else {
+        createTaperedPier(tower, -2, 4.4, 4, 8, 3.3, 7, materials.anchorageConcrete);
       }
       towerReferences.push({ tower, x });
     }
@@ -1862,12 +1955,19 @@
       shared.windowGeometry = new THREE.BoxGeometry(.45, .24, .06);
       shared.treeGeometry = new THREE.ConeGeometry(1, 3.3, 7);
       shared.trunkGeometry = new THREE.CylinderGeometry(.18, .24, 1.2, 6);
+      // buildBridge also creates these, but the approaches are generated first;
+      // make them now so approach lane marks and lamp posts receive real geometry.
+      if (!shared.laneGeometry) shared.laneGeometry = new THREE.BoxGeometry(6.5, .06, .12);
+      if (!shared.poleGeometry) shared.poleGeometry = new THREE.CylinderGeometry(.14, .19, 8.5, 8);
+      if (!shared.lampGeometry) shared.lampGeometry = new THREE.SphereGeometry(.42, 8, 6);
 
       createLandMasses();
       createApproaches();
+      createCityApproachExtension();
       createApproachViaducts();
       createFortPoint();
       createCity();
+      createCityTunnel();
       createHeadlands();
       createShoreline();
       createSignGantry(-362, ['Golden Gate Bridge', 'TOLL • KEEP MOVING • 45 MPH'], 1);
@@ -1879,7 +1979,9 @@
 
     function createLandMasses() {
       createBox(environmentGroup, new THREE.BoxGeometry(520, 7, 620), materials.presidio, -530, -2, 0);
-      createBox(environmentGroup, new THREE.BoxGeometry(560, 7, 640), materials.headland, 550, -2, 0);
+      // The Marin shore reaches Lime Point at the north tower (x = +210), as in the
+      // real bridge; the old land stopped 600 ft short and left the pier offshore.
+      createBox(environmentGroup, new THREE.BoxGeometry(616, 7, 640), materials.headland, 522, -2, 0);
       // Distant shoreline bluffs so land meets the horizon instead of ending mid-water.
       // Tops at y 1.5 (above wave crests); slabs abut edge-to-edge instead of
       // overlapping so no coplanar faces can z-fight.
@@ -1896,9 +1998,10 @@
     }
 
     function createApproaches() {
-      // Slab and rails are segmented so they follow the eased vertical curve with
-      // a level tangent at the bridge joint — no kink. Marks, lights and barriers
-      // key off approachCenterY / approachAngle below.
+      // Slabs are segmented so they follow the eased vertical curve with a level
+      // tangent at the bridge joint — no kink. Marks, lights and railings key off
+      // approachCenterY / approachAngle below.
+      const approachCentreLineGeometry = new THREE.BoxGeometry(14.05, .06, .12);
       for (const side of [-1, 1]) {
         const sgn = side < 0 ? -1 : 1;
         const xInner = sgn * ANCHORAGE_X;
@@ -1913,12 +2016,8 @@
           const ang = Math.atan2(y1 - y0, x1 - x0);
           const slab = createBox(environmentGroup, new THREE.BoxGeometry(len, 1.7, DECK_WIDTH), materials.roadSurface, (x0 + x1) / 2, (y0 + y1) / 2, 0);
           slab.rotation.z = ang;
-          for (const z of [-(DECK_WIDTH / 2 + .8), DECK_WIDTH / 2 + .8]) {
-            const rail = createBox(environmentGroup, new THREE.BoxGeometry(len, .45, .25), materials.orangeSteel, (x0 + x1) / 2, (y0 + y1) / 2 + 3.2, z);
-            rail.rotation.z = ang;
-          }
         }
-        for (const z of [-2.7, -.9, .9, 2.7]) {
+        for (const z of [-3.3, -1.65, 1.65, 3.3]) {
           for (let index = 1; index < 9; index += 1) {
             const progress = index / 9;
             const x = side < 0 ? -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH : BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
@@ -1927,12 +2026,18 @@
             mark.rotation.z = approachAngle(x);
           }
         }
+        for (let index = 1; index < 9; index += 1) {
+          const progress = index / 9;
+          const x = side < 0 ? -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH : BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
+          const mark = createBox(environmentGroup, approachCentreLineGeometry, materials.laneYellow, x, approachCenterY(x) + .88, -.2);
+          mark.rotation.z = approachAngle(x);
+        }
       }
       for (let index = 0; index <= 4; index += 1) {
         const progress = (index + .5) / 5;
         const leftX = -BRIDGE_HALF_LENGTH + progress * APPROACH_LENGTH;
         const rightX = BRIDGE_HALF_LENGTH - progress * APPROACH_LENGTH;
-        for (const z of [-(DECK_WIDTH / 2 + 2.4), DECK_WIDTH / 2 + 2.4]) {
+        for (const z of [-(DECK_WIDTH / 2 - .2), DECK_WIDTH / 2 - .2]) {
           createStreetLight(leftX, approachCenterY(leftX), z);
           createStreetLight(rightX, approachCenterY(rightX), z);
         }
@@ -1943,7 +2048,8 @@
       // Open deck-truss viaducts carrying both approach ramps on red steel
       // trestle bents (per reference photos) — no concrete masses. Top chords sit
       // on the eased ramp centreline so they meet the main stiffening truss flush
-      // with a level tangent (no kink). Grassed banks rise to meet each toe.
+      // with a level tangent (no kink). The city side continues past the old toe
+      // to the Presidio Parkway tunnel; the Marin side still lands on its bank.
       if (!shared.beamGeometry) shared.beamGeometry = new THREE.BoxGeometry(1, 1, 1);
       const group = new THREE.Group();
       group.name = 'Approach truss viaducts on steel bents';
@@ -1953,12 +2059,15 @@
       for (const side of [-1, 1]) {
         const sgn = side < 0 ? -1 : 1;
         const xStart = sgn * ANCHORAGE_X;
-        const xEnd = sgn * BRIDGE_HALF_LENGTH;
-        // Embankment bank grounding the toe: top rises 3 -> 13.2 over |x| 400 -> 452
-        const bankAng = Math.atan2(10.2, 52);
-        const bank = createBox(group, new THREE.BoxGeometry(57, 12, 26), side < 0 ? materials.presidio : materials.headland, sgn * 426, 2.1, 0);
-        bank.rotation.z = side < 0 ? -bankAng : bankAng;
-        const panels = Math.max(4, Math.round(APPROACH_LENGTH / 9));
+        const xEnd = side < 0 ? CITY_TUNNEL_PORTAL_X : BRIDGE_HALF_LENGTH;
+        if (side > 0) {
+          // Embankment bank grounding the Marin toe: top rises 3 -> 13.2 over |x| 400 -> 452
+          const bankAng = Math.atan2(10.2, 52);
+          const bank = createBox(group, new THREE.BoxGeometry(57, 12, 26), materials.headland, sgn * 426, 2.1, 0);
+          bank.rotation.z = bankAng;
+        }
+        const length = Math.abs(xEnd - xStart);
+        const panels = Math.max(4, Math.round(length / 9));
         const nodeX = (i) => xStart + (xEnd - xStart) * (i / panels);
         const topAt = (i, z) => new THREE.Vector3(nodeX(i), rampY(nodeX(i)), z);
         const bottomAt = (i, z) => new THREE.Vector3(nodeX(i), rampY(nodeX(i)) - TRUSS_DEPTH, z);
@@ -1981,12 +2090,16 @@
         for (const zSide of [-1, 1]) beam(topAt(panels, zSide * TRUSS_Z), bottomAt(panels, zSide * TRUSS_Z), .36, materials.orangeSteel);
         // Red steel trestle bents down to grade, anchorage cap, or embankment bank.
         // The bent at the suspension line is vertical (no raking strut) and picks up
-        // both the main-truss end and the approach-truss start.
-        for (const i of [0, 3, 6, 9, 12, 14]) {
-          if (i > panels) continue;
+        // both the main-truss end and the approach-truss start. City-side bents are
+        // skipped once the descending truss reaches grade at the tunnel portal.
+        const bentIndices = [];
+        for (let i = 0; i < panels; i += 3) bentIndices.push(i);
+        bentIndices.push(panels);
+        for (const i of bentIndices) {
           const x = nodeX(i);
           const topY = rampY(x) - TRUSS_DEPTH;
           const baseY = approachGroundY(x);
+          if (side < 0 && topY <= baseY + .4) continue;
           for (const zSide of [-1, 1]) {
             const z = zSide * TRUSS_Z;
             beam(new THREE.Vector3(x, baseY - .5, z), new THREE.Vector3(x, topY, z), .55, materials.orangeSteel);
@@ -2001,15 +2114,118 @@
       }
     }
 
+    function createCityApproachExtension() {
+      // South approach beyond the bridge abutment: the roadway continues down the
+      // Presidio Parkway viaduct and reaches the tunnel portal at grade. This is
+      // the missing link that previously made cars appear to fly over the Presidio.
+      const xInner = -BRIDGE_HALF_LENGTH;
+      const xOuter = CITY_TUNNEL_PORTAL_X;
+      const segs = 20;
+      for (let i = 0; i < segs; i += 1) {
+        const x0 = xInner + (xOuter - xInner) * (i / segs);
+        const x1 = xInner + (xOuter - xInner) * ((i + 1) / segs);
+        const y0 = approachCenterY(x0);
+        const y1 = approachCenterY(x1);
+        const len = Math.hypot(x1 - x0, y1 - y0) + .6;
+        const ang = Math.atan2(y1 - y0, x1 - x0);
+        const slab = createBox(environmentGroup, new THREE.BoxGeometry(len, 1.7, DECK_WIDTH), materials.roadSurface, (x0 + x1) / 2, (y0 + y1) / 2, 0);
+        slab.rotation.z = ang;
+      }
+      const centreLineGeometry = new THREE.BoxGeometry(14.05, .06, .12);
+      for (const z of [-3.3, -1.65, 1.65, 3.3]) {
+        for (let x = xInner - 6; x > xOuter + 10; x -= 14) {
+          const mark = createBox(environmentGroup, shared.laneGeometry, materials.laneWhite, x, approachCenterY(x) + .88, z);
+          mark.rotation.z = approachAngle(x);
+        }
+      }
+      for (let x = xInner - 6; x > xOuter + 10; x -= 14) {
+        const mark = createBox(environmentGroup, centreLineGeometry, materials.laneYellow, x, approachCenterY(x) + .88, -.2);
+        mark.rotation.z = approachAngle(x);
+      }
+      for (const x of [-480, -540, -600]) {
+        for (const z of [-(DECK_WIDTH / 2 - .2), DECK_WIDTH / 2 - .2]) {
+          createStreetLight(x, approachCenterY(x), z);
+        }
+      }
+    }
+
+    function createCityTunnel() {
+      // Presidio Parkway tunnel portal: twin bores under a landscaped cut-and-cover
+      // roof, matching the real southern approach rather than ending the road in air.
+      const portalX = CITY_TUNNEL_PORTAL_X;
+      const endX = CITY_TUNNEL_END_X;
+      const roadY = CITY_APPROACH_EXTENSION_END_Y;
+      const roadTop = roadY + APPROACH_TOP_OFFSET;
+      const openingHalfWidth = 5.6;
+      const openingTop = roadY + 4.8;
+      const facadeTop = openingTop + 1.8;
+      const facadeHalfWidth = 22;
+      const tunnelHalfWidth = openingHalfWidth + .6;
+      const tunnelLength = portalX - endX;
+      const tunnelMid = (portalX + endX) / 2;
+      const centralWallHalfWidth = .1;
+      // Portal facade: two side walls, a header, a central divider, and flared wings.
+      for (const side of [-1, 1]) {
+        const inner = side * openingHalfWidth;
+        const outer = side * facadeHalfWidth;
+        const width = Math.abs(outer - inner);
+        createBox(environmentGroup, new THREE.BoxGeometry(1.4, facadeTop - roadY, width), materials.anchorageConcrete, portalX - .7, (roadY + facadeTop) / 2, (inner + outer) / 2);
+        const wing = createBox(environmentGroup, new THREE.BoxGeometry(24, 6, 1.2), materials.retaining, portalX + 9, roadY + 3, side * (facadeHalfWidth + 7));
+        wing.rotation.y = side * .62;
+      }
+      createBox(environmentGroup, new THREE.BoxGeometry(1.4, facadeTop - openingTop, openingHalfWidth * 2), materials.anchorageConcrete, portalX - .7, (openingTop + facadeTop) / 2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(1.4, openingTop - roadY, centralWallHalfWidth * 2), materials.anchorageConcrete, portalX - .7, (roadY + openingTop) / 2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(2.4, .9, facadeHalfWidth * 2 + 2), materials.anchorageRoof, portalX - .2, facadeTop + .45, 0);
+      // Dark twin bores: side walls, centre wall, ceiling, roadway, and closed far end.
+      for (const side of [-1, 1]) {
+        createBox(environmentGroup, new THREE.BoxGeometry(tunnelLength, openingTop - roadY, .7), materials.tunnelDark, tunnelMid, (roadY + openingTop) / 2, side * tunnelHalfWidth);
+      }
+      createBox(environmentGroup, new THREE.BoxGeometry(tunnelLength, openingTop - roadY, centralWallHalfWidth * 2), materials.tunnelDark, tunnelMid, (roadY + openingTop) / 2, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(tunnelLength, .7, tunnelHalfWidth * 2), materials.tunnelDark, tunnelMid, openingTop, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(tunnelLength, .5, openingHalfWidth * 2), materials.asphalt, tunnelMid, roadTop - .25, 0);
+      createBox(environmentGroup, new THREE.BoxGeometry(.8, openingTop - roadY, tunnelHalfWidth * 2), materials.tunnelDark, endX, (roadY + openingTop) / 2, 0);
+      // Interior ceiling lights and lane markings.
+      for (let x = portalX - 14; x > endX + 8; x -= 14) {
+        for (const z of [-2.7, 2.7]) {
+          createBox(environmentGroup, new THREE.BoxGeometry(2.4, .12, .5), materials.bridgeLight, x, openingTop - .45, z);
+        }
+        for (const z of [-3.3, -1.65, 1.65, 3.3]) {
+          createBox(environmentGroup, shared.laneGeometry, materials.laneWhite, x, roadTop + .01, z);
+        }
+      }
+      // Landscaped cut-and-cover roof and flanking Presidio mounds.
+      createBox(environmentGroup, new THREE.BoxGeometry(tunnelLength + 10, 3.2, 70), materials.meadowPark, tunnelMid - 5, openingTop + 2.2, 0);
+      for (const side of [-1, 1]) {
+        const mound = new THREE.Mesh(shared.hillGeometry, materials.cityHill);
+        mound.position.set(tunnelMid - 10, 8.5, side * 48);
+        mound.scale.set(95, 34, 68);
+        mound.castShadow = true;
+        mound.receiveShadow = true;
+        environmentGroup.add(mound);
+        // Grassed cheeks wrap the portal into the hillside and hide the roof edge.
+        const cheek = new THREE.Mesh(shared.hillGeometry, materials.meadowPark);
+        cheek.position.set(portalX + 10, 5, side * 32);
+        cheek.scale.set(34, 26, 34);
+        cheek.castShadow = true;
+        cheek.receiveShadow = true;
+        environmentGroup.add(cheek);
+      }
+      const backMound = new THREE.Mesh(shared.hillGeometry, materials.meadowPark);
+      backMound.position.set(endX - 10, 11.5, 0);
+      backMound.scale.set(85, 42, 95);
+      backMound.castShadow = true;
+      backMound.receiveShadow = true;
+      environmentGroup.add(backMound);
+      createForest(tunnelMid - 5, 0, 70, 40, 22, 90212, openingTop + 3.8, .7, 1.1);
+    }
+
     function createStreetLight(x, y, z) {
-      // y is the road centreline: run the pole from the ground up to the lamp head
-      // (approach poles previously floated above the grade).
-      const ground = approachGroundY(x);
-      const lampY = y + 8.75;
-      const height = Math.max(4, lampY - ground);
-      const pole = createBox(environmentGroup, shared.poleGeometry, materials.lampPole, x, ground + height / 2, z);
-      pole.scale.y = height / 8.5;
-      createBox(environmentGroup, shared.lampGeometry, materials.bridgeLight, x, lampY, z);
+      // y is the road centreline; mount the lamp on the wearing surface so the
+      // approach lights align with the bridge deck lamps instead of standing on
+      // tall poles beside the viaduct.
+      const base = y + APPROACH_TOP_OFFSET;
+      createBox(environmentGroup, shared.poleGeometry, materials.lampPole, x, base + 4.25, z);
+      createBox(environmentGroup, shared.lampGeometry, materials.bridgeLight, x, base + 8.6, z);
     }
 
     function createFortPoint() {
@@ -2043,7 +2259,7 @@
       for (let i = 0; i < count; i += 1) {
         const x = cx + (random() - .5) * spreadX;
         let z = cz + (random() - .5) * spreadZ;
-        if (Math.abs(z) < 14 && x > -470) z = 14 * (z >= 0 ? 1 : -1); // keep the approach corridor clear
+        if (yBase < 8 && Math.abs(z) < 18 && x > CITY_TUNNEL_END_X) z = 18 * (z >= 0 ? 1 : -1); // keep the road and tunnel corridor clear
         const s = sMin + random() * (sMax - sMin);
         eul.set(0, random() * TAU, 0);
         q.setFromEuler(eul);
@@ -2067,7 +2283,7 @@
       // Low rolling Presidio bluffs, kept clear of the approach road (z = 0)
       const bluffs = [
         [-560, -150, 150, 26, 130], [-600, 140, 170, 30, 140], [-480, -210, 120, 20, 90],
-        [-420, 190, 110, 24, 100], [-680, -40, 150, 34, 120], [-690, 90, 140, 28, 110],
+        [-420, 190, 110, 24, 100], [-760, -95, 140, 36, 100], [-690, 90, 140, 28, 110],
         [-380, -120, 90, 14, 70], [-370, 130, 95, 16, 75]
       ];
       const bluffMats = [materials.meadowPark, materials.cityHill, materials.meadowPark, materials.presidio];
@@ -2170,25 +2386,52 @@
       environmentGroup.add(g);
     }
 
-    // Precast concrete barriers following both approach slopes
+    // Continuous red steel approach railings plus the movable concrete median
+    // barrier that runs from the city tunnel through the bridge and approaches.
     function createApproachBarriers() {
-      const spots = [];
-      for (const side of [-1, 1]) {
-        for (let x = 330; x <= 445; x += 7.5) {
-          for (const sx of [-x, x]) {
-            const y = approachPoint(sx, 0, { lateral: 0, vertical: 0, rotation: 0, longitudinal: 0 }).y;
-            spots.push([sx, y + 1.2, side * 6.6]);
+      const railZ = DECK_WIDTH / 2 - .1;
+      const medianGeometry = createMedianBarrierGeometry(1.45);
+      const postGeometry = new THREE.BoxGeometry(.16, 1.7, .16);
+      const ranges = [
+        [-BRIDGE_HALF_LENGTH, -ANCHORAGE_X],
+        [ANCHORAGE_X, BRIDGE_HALF_LENGTH],
+        [CITY_TUNNEL_PORTAL_X, -BRIDGE_HALF_LENGTH]
+      ];
+      for (const [xa, xb] of ranges) {
+        const length = xb - xa;
+        const segs = Math.max(1, Math.round(length / 10));
+        for (let i = 0; i < segs; i += 1) {
+          const x0 = xa + length * (i / segs);
+          const x1 = xa + length * ((i + 1) / segs);
+          const xm = (x0 + x1) / 2;
+          const y0 = approachCenterY(x0);
+          const y1 = approachCenterY(x1);
+          const len = Math.hypot(x1 - x0, y1 - y0) + .2;
+          const ang = Math.atan2(y1 - y0, x1 - x0);
+          for (const side of [-1, 1]) {
+            const z = side * railZ;
+            const top = createBox(environmentGroup, new THREE.BoxGeometry(len, .14, .16), materials.orangeSteel, xm, (y0 + y1) / 2 + 2.5, z);
+            top.rotation.z = ang;
+            for (const baseY of [1.85, 1.25]) {
+              const rail = createBox(environmentGroup, new THREE.BoxGeometry(len, .1, .1), materials.orangeSteel, xm, (y0 + y1) / 2 + baseY, z);
+              rail.rotation.z = ang;
+            }
           }
         }
+        for (let x = xa + 2.5; x <= xb; x += 5) {
+          for (const side of [-1, 1]) {
+            createBox(environmentGroup, postGeometry, materials.orangeSteel, x, approachCenterY(x) + 1.7, side * railZ);
+          }
+        }
+        for (let x = xa; x <= xb; x += 1.5) {
+          const median = new THREE.Mesh(medianGeometry, materials.anchorageConcrete);
+          median.position.set(x, approachCenterY(x) + 1.175, 0);
+          median.rotation.z = approachAngle(x);
+          median.castShadow = true;
+          median.receiveShadow = true;
+          environmentGroup.add(median);
+        }
       }
-      const barriers = new THREE.InstancedMesh(new THREE.BoxGeometry(3.6, 1.1, .6), materials.anchorageConcrete, spots.length);
-      const m = new THREE.Matrix4();
-      spots.forEach(([x, y, z], i) => { m.makeTranslation(x, y, z); barriers.setMatrixAt(i, m); });
-      barriers.instanceMatrix.needsUpdate = true;
-      barriers.castShadow = true;
-      barriers.receiveShadow = true;
-      barriers.name = 'Approach concrete barriers';
-      environmentGroup.add(barriers);
     }
 
     // Instanced rocks + shrubs on open ground, plus riprap armoring both strait banks
@@ -2198,7 +2441,7 @@
       const bushSpots = [];
       for (let i = 0; i < 260; i += 1) {
         const sfSide = random() > .4;
-        const x = sfSide ? -750 + random() * 460 : 272 + random() * 60;
+        const x = sfSide ? -750 + random() * 460 : 214 + random() * 90;
         const z = (random() - .5) * (sfSide ? 560 : 260);
         if (Math.abs(z) < 16) continue;
         if (sfSide && x > -300 && Math.abs(z) < 120) continue; // toll / Fort Point clearing
@@ -2233,10 +2476,18 @@
       bushes.castShadow = true;
       bushes.receiveShadow = true;
       environmentGroup.add(bushes);
-      // Riprap along both strait banks
+      // Riprap along both strait banks; the Marin bank now meets the north pier
+      // at Lime Point, so leave a gap for the pier and arm its waterline.
       const ripSpots = [];
-      for (const sx of [-272, 272]) {
-        for (let z = -130; z <= 130; z += 7) ripSpots.push([sx + (random() - .5) * 6, z + (random() - .5) * 3]);
+      for (const sx of [-272, 214]) {
+        for (let z = -130; z <= 130; z += 7) {
+          if (sx > 0 && Math.abs(z) < 12) continue;
+          ripSpots.push([sx + (random() - .5) * 6, z + (random() - .5) * 3]);
+        }
+      }
+      for (let i = 0; i < 12; i += 1) {
+        const side = i % 2 ? 1 : -1;
+        ripSpots.push([207 + (i % 3) * 3, side * (9 + (i % 6) * 3)]);
       }
       const riprap = new THREE.InstancedMesh(shared.rockGeometry, materials.cliffRock, ripSpots.length);
       ripSpots.forEach(([x, z], i) => {
@@ -2316,11 +2567,18 @@
           environmentGroup.add(rock);
         }
       }
+      // Low rocky point at Lime Point behind the north tower pier; the deck is at
+      // y 22, so this stays well below the side span.
+      const limePoint = new THREE.Mesh(shared.hillGeometry, materials.sandstone);
+      limePoint.position.set(255, 4.5, 0);
+      limePoint.scale.set(42, 16, 95);
+      limePoint.receiveShadow = true;
+      environmentGroup.add(limePoint);
       // Pale sandstone sea cliffs at Lime Point / Point Diablo, right at the strait
       for (const z of [-95, 95]) {
         for (let i = 0; i < 4; i += 1) {
           const cliff = new THREE.Mesh(shared.rockGeometry, materials.sandstone);
-          cliff.position.set(285 + i * 32 + random() * 10, 4 + random() * 6, z + (random() - .5) * 10);
+          cliff.position.set(220 + i * 32 + random() * 10, 4 + random() * 6, z + (random() - .5) * 10);
           cliff.scale.set(16 + random() * 10, 12 + random() * 10, 10 + random() * 8);
           cliff.rotation.y = random() * TAU;
           cliff.castShadow = true;
@@ -2702,13 +2960,6 @@
       overlayGroup = new THREE.Group();
       overlayGroup.name = 'Structural overlay';
       scene.add(overlayGroup);
-      const nodePositions = new Float32Array(OVERLAY_NODE_COUNT * 3);
-      for (let i = 0; i < OVERLAY_NODE_COUNT; i += 1) nodePositions[i * 3] = SUSPENSION_START + i * OVERLAY_NODE_STEP;
-      const nodeGeometry = new THREE.BufferGeometry();
-      nodeGeometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
-      deckNodes = new THREE.Points(nodeGeometry, new THREE.PointsMaterial({ color: 0x62d7c7, size: 2.2, sizeAttenuation: true }));
-      overlayGroup.add(deckNodes);
-
       const linePositions = new Float32Array(OVERLAY_NODE_COUNT * 3);
       const lineGeometry = new THREE.BufferGeometry();
       lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
@@ -2729,18 +2980,15 @@
     }
 
     function updateStructuralOverlay(response) {
-      const nodes = deckNodes.geometry.attributes.position.array;
       const line = deckCenterLine.geometry.attributes.position.array;
       const vectors = displacementVectors.geometry.attributes.position.array;
       for (let i = 0; i < OVERLAY_NODE_COUNT; i += 1) {
         const x = SUSPENSION_START + i * OVERLAY_NODE_STEP;
         const p = getDeckPoint(x, 0, response);
-        nodes[i * 3] = p.x; nodes[i * 3 + 1] = p.y + 1.3; nodes[i * 3 + 2] = p.z;
         line[i * 3] = p.x; line[i * 3 + 1] = p.y + 1; line[i * 3 + 2] = p.z;
         vectors[i * 6] = p.x; vectors[i * 6 + 1] = p.y; vectors[i * 6 + 2] = p.z;
         vectors[i * 6 + 3] = p.x; vectors[i * 6 + 4] = p.y + response.vertical * .35; vectors[i * 6 + 5] = p.z + response.lateral * .35;
       }
-      deckNodes.geometry.attributes.position.needsUpdate = true;
       deckCenterLine.geometry.attributes.position.needsUpdate = true;
       displacementVectors.geometry.attributes.position.needsUpdate = true;
       displacementVectors.visible = state.vectors && state.overlay;
@@ -3636,20 +3884,27 @@
       for (const vehicle of vehicles) trafficGroup.remove(vehicle.group);
       vehicles = [];
       const count = Math.round(7 + state.trafficDensity * .46);
+      const loopMin = CITY_TRAFFIC_WRAP_X;
+      const loopMax = TRAFFIC_LIMIT;
+      const loopLength = loopMax - loopMin;
       for (let index = 0; index < count; index += 1) {
         const definitionName = chooseVehicleType(index);
         const group = makeVehicle(definitionName, index);
         const direction = index % 2 === 0 ? 1 : -1;
-        const lanes = direction > 0 ? [-2.7, -.9] : [.9, 2.7];
+        const lanes = direction > 0 ? POSITIVE_TRAFFIC_LANES : NEGATIVE_TRAFFIC_LANES;
         const lane = lanes[index % lanes.length];
+        const spread = (index * 97.3) % loopLength;
+        const x = direction > 0 ? loopMin + spread : loopMax - spread;
         const vehicle = {
-          id: vehicleSerial++, group, direction, lane, targetLane: lane,
-          x: direction > 0 ? SUSPENSION_START - 10 - (index * 41) % 420 : SUSPENSION_END + 10 + (index * 43) % 420,
+          id: vehicleSerial++, group, direction, lane, targetLane: lane, x,
           baseSpeed: state.trafficSpeed * (.78 + (index % 7) * .055),
           slowing: false, seed: index * 1.79 + 4
         };
         group.userData.vehicle = vehicle;
-        group.position.set(vehicle.x, DECK_Y + DECK_TOP_OFFSET + .02, vehicle.lane);
+        const point = roadPointAt(x, lane, currentResponse);
+        point.y += .02;
+        group.position.copy(point);
+        group.rotation.y = direction > 0 ? 0 : Math.PI;
         trafficGroup.add(group);
         vehicles.push(vehicle);
       }
@@ -3676,15 +3931,15 @@
             vehicle.targetLane = possible[(laneChangeClock + Math.floor(vehicle.seed)) % possible.length];
           }
           vehicle.lane = lerp(vehicle.lane, vehicle.targetLane, clamp(dt * .8, 0, 1));
-          if (vehicle.direction > 0 && vehicle.x > TRAFFIC_LIMIT) vehicle.x = -TRAFFIC_LIMIT - (vehicle.seed % 80);
-          if (vehicle.direction < 0 && vehicle.x < -TRAFFIC_LIMIT) vehicle.x = TRAFFIC_LIMIT + (vehicle.seed % 80);
+          if (vehicle.direction > 0 && vehicle.x > TRAFFIC_LIMIT) vehicle.x = CITY_TRAFFIC_WRAP_X + (vehicle.seed % 30);
+          if (vehicle.direction < 0 && vehicle.x < CITY_TRAFFIC_WRAP_X) vehicle.x = TRAFFIC_LIMIT + (vehicle.seed % 80);
         }
         const onSuspensionSpan = vehicle.x >= SUSPENSION_START && vehicle.x <= SUSPENSION_END;
         const deckResponse = onSuspensionSpan ? currentResponse : { ...currentResponse, lateral: currentResponse.lateral * .25, vertical: currentResponse.vertical * .25, rotation: currentResponse.rotation * .25, longitudinal: 0 };
-        const point = onSuspensionSpan ? getDeckPoint(vehicle.x, vehicle.lane, deckResponse) : approachPoint(vehicle.x, vehicle.lane, deckResponse);
+        const point = roadPointAt(vehicle.x, vehicle.lane, deckResponse);
+        point.y += .02;
         const roadPitch = onSuspensionSpan ? 0 : approachAngle(vehicle.x);
         vehicle.group.position.copy(point);
-        vehicle.group.position.y += (onSuspensionSpan ? DECK_TOP_OFFSET : APPROACH_TOP_OFFSET) + .02;
         vehicle.group.rotation.y = vehicle.direction > 0 ? 0 : Math.PI;
         vehicle.group.rotation.z = clamp(currentResponse.rotation * .015, -.08, .08) + roadPitch;
         const lightsOn = state.environment === 'night' || state.environment === 'fog' || state.windstorm || state.stormFog > 38;
@@ -3699,6 +3954,13 @@
 
     function approachPoint(x, z, response) {
       return new THREE.Vector3(x, approachCenterY(x), z + response.lateral * .25);
+    }
+
+    function roadPointAt(x, z, response) {
+      const onSuspensionSpan = x >= SUSPENSION_START && x <= SUSPENSION_END;
+      const point = onSuspensionSpan ? getDeckPoint(x, z, response) : approachPoint(x, z, response);
+      point.y += onSuspensionSpan ? DECK_TOP_OFFSET : APPROACH_TOP_OFFSET;
+      return point;
     }
 
     function updateTrafficLabel() {
@@ -4342,10 +4604,10 @@
       const car = makeVehicle('sedan', 0, 0x4fc3f7);
       car.name = 'Driver view car';
       driverCar = car;
-      driverCarData = { x: SUSPENSION_START - 15, lane: -0.9, direction: 1, baseSpeed: 68 };
-      const pos = getDeckPoint(driverCarData.x, driverCarData.lane, currentResponse);
+      driverCarData = { x: SUSPENSION_START - 15, lane: POSITIVE_TRAFFIC_LANES[1], direction: 1, baseSpeed: 68 };
+      const pos = roadPointAt(driverCarData.x, driverCarData.lane, currentResponse);
+      pos.y += .02;
       car.position.copy(pos);
-      car.position.y += DECK_TOP_OFFSET + 0.02;
       car.rotation.y = 0;
       // add to trafficGroup so it shares lighting but stays independent
       if (trafficGroup) trafficGroup.add(car);
@@ -4359,14 +4621,14 @@
       if (!state.trafficPaused) {
         const speedFactor = (state.windstorm && currentResponse.gust >= 120) ? clamp(1 - (currentResponse.gust - 100) / 260, .34, 1) : 1;
         data.x += data.direction * data.baseSpeed * dt * .34 * speedFactor;
-        if (data.direction > 0 && data.x > TRAFFIC_LIMIT) data.x = -TRAFFIC_LIMIT - 20;
-        if (data.direction < 0 && data.x < -TRAFFIC_LIMIT) data.x = TRAFFIC_LIMIT + 20;
+        if (data.direction > 0 && data.x > TRAFFIC_LIMIT) data.x = CITY_TRAFFIC_WRAP_X + 20;
+        if (data.direction < 0 && data.x < CITY_TRAFFIC_WRAP_X) data.x = TRAFFIC_LIMIT + 20;
       }
       const onSusp = data.x >= SUSPENSION_START && data.x <= SUSPENSION_END;
-      const pt = onSusp ? getDeckPoint(data.x, data.lane, response) : approachPoint(data.x, data.lane, response);
+      const pt = roadPointAt(data.x, data.lane, response);
+      pt.y += .02;
       const roadPitch = onSusp ? 0 : approachAngle(data.x);
       driverCar.position.copy(pt);
-      driverCar.position.y += (onSusp ? DECK_TOP_OFFSET : APPROACH_TOP_OFFSET) + 0.02;
       driverCar.rotation.y = data.direction > 0 ? 0 : Math.PI;
       driverCar.rotation.z = clamp(response.rotation * 0.015, -0.08, 0.08) + roadPitch;
     }
@@ -4376,12 +4638,10 @@
       const lane = driverCarData.lane;
       const x = driverCarData.x;
       const dir = driverCarData.direction;
-      const eyeOffsetY = DECK_TOP_OFFSET + 1.5;
-      const eye = getDeckPoint(x + dir * .7, lane, currentResponse);
-      eye.y += eyeOffsetY;
-      const aheadX = x + dir * 24;
-      const ahead = getDeckPoint(aheadX, lane, currentResponse);
-      ahead.y += eyeOffsetY;
+      const eye = roadPointAt(x + dir * .7, lane, currentResponse);
+      eye.y += 1.5;
+      const ahead = roadPointAt(x + dir * 24, lane, currentResponse);
+      ahead.y += 1.5;
       // follow tightly along the road so the car body does not sit in the near view
       camera.position.lerp(eye, 0.18);
       camera.position.x = eye.x;
@@ -4395,10 +4655,10 @@
         isDriverView = true;
         if (!driverCar) createDriverCar();
         // place camera immediately near car then let follow take over
-        const eye = getDeckPoint(driverCarData.x + driverCarData.direction * .7, driverCarData.lane, currentResponse);
-        eye.y += DECK_TOP_OFFSET + 1.5;
-        const ahead = getDeckPoint(driverCarData.x + driverCarData.direction * 24, driverCarData.lane, currentResponse);
-        ahead.y += DECK_TOP_OFFSET + 1.5;
+        const eye = roadPointAt(driverCarData.x + driverCarData.direction * .7, driverCarData.lane, currentResponse);
+        eye.y += 1.5;
+        const ahead = roadPointAt(driverCarData.x + driverCarData.direction * 24, driverCarData.lane, currentResponse);
+        ahead.y += 1.5;
         cameraTween = null;
         if (immediate || state.reducedMotion) {
           camera.position.copy(eye);
@@ -5170,6 +5430,7 @@
       materials.anchorageRoof = makeMaterial('anchorageRoof', { color: 0x7e858a, roughness: 0.90 });
       materials.cable = makeMaterial('cable', { color: 0xc88255, roughness: .42, metalness: .30 });
       materials.asphalt = makeMaterial('asphalt', { color: 0x2e383d, roughness: .85, metalness: .04 });
+      materials.tunnelDark = makeMaterial('tunnelDark', { color: 0x101416, roughness: 1, metalness: 0 });
       materials.roadSurface = makeMaterial('roadSurface', { color: 0x5f6468, roughness: .92 });
       materials.laneWhite = makeMaterial('laneWhite', { color: 0xe6ede5, roughness: .60 });
       materials.laneYellow = makeMaterial('laneYellow', { color: 0xf2ce68, roughness: .55 });
